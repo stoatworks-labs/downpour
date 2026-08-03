@@ -943,6 +943,225 @@ int readbackCheck()
 	std::printf( "  ok   the document round-trips through the atlas and the shader\n" );
 	return 0;
 }
+//---------------------------------------------------------------------------
+// --sequence
+//
+// Renders a run of frames in one process, driving the plugin's own parameters
+// from a cue sheet. That is the point: the project video is the real plugin
+// being operated, not a mock-up or a screen recording of something else.
+//
+// One process rather than one per frame because the font scan, the atlas build
+// and the GL context all happen once. A thousand frames through the shell would
+// be twenty minutes of process startup.
+//
+// Cue syntax, one per line, `#` for comments:
+//
+//     12.0        Speed=0.8            set at t=12s
+//     4.0..9.0    Columns=0.3..0.7     ramp between two times
+//
+// Times are seconds on the video's own clock, which is also the host clock
+// handed to the plugin -- so a cue at 12s is the frame you see at 12s.
+//---------------------------------------------------------------------------
+struct Cue
+{
+	double from  = 0.0;
+	double to    = 0.0;
+	std::string name;
+	float first  = 0.0f;
+	float second = 0.0f;
+	bool ramp    = false;
+	bool text    = false;
+	std::string textValue;
+};
+
+bool parseCues( const std::string& path, std::vector< Cue >& cues )
+{
+	FILE* file = fopen( path.c_str(), "rb" );
+	if( file == nullptr )
+	{
+		std::fprintf( stderr, "cannot open cue sheet %s\n", path.c_str() );
+		return false;
+	}
+
+	char line[ 1024 ];
+	int number = 0;
+	while( fgets( line, sizeof( line ), file ) != nullptr )
+	{
+		++number;
+		std::string text = line;
+
+		const size_t hash = text.find( '#' );
+		if( hash != std::string::npos )
+			text = text.substr( 0, hash );
+
+		const size_t firstReal = text.find_first_not_of( " \t\r\n" );
+		if( firstReal == std::string::npos )
+			continue;
+		text = text.substr( firstReal );
+
+		const size_t split = text.find_first_of( " \t" );
+		if( split == std::string::npos )
+			continue;
+
+		const std::string when       = text.substr( 0, split );
+		std::string assignment       = text.substr( split );
+		const size_t assignStart     = assignment.find_first_not_of( " \t" );
+		if( assignStart == std::string::npos )
+			continue;
+		assignment = assignment.substr( assignStart );
+		while( !assignment.empty() && ( assignment.back() == '\n' || assignment.back() == '\r'
+		                                || assignment.back() == ' ' || assignment.back() == '\t' ) )
+			assignment.pop_back();
+
+		Cue cue;
+		const size_t timeRange = when.find( ".." );
+		if( timeRange != std::string::npos )
+		{
+			cue.from = std::strtod( when.substr( 0, timeRange ).c_str(), nullptr );
+			cue.to   = std::strtod( when.substr( timeRange + 2 ).c_str(), nullptr );
+			cue.ramp = true;
+		}
+		else
+		{
+			cue.from = cue.to = std::strtod( when.c_str(), nullptr );
+		}
+
+		const size_t equals = assignment.find( '=' );
+		if( equals == std::string::npos )
+		{
+			std::fprintf( stderr, "%s:%d: expected Name=value\n", path.c_str(), number );
+			return false;
+		}
+
+		cue.name           = assignment.substr( 0, equals );
+		const std::string value = assignment.substr( equals + 1 );
+
+		const size_t valueRange = value.find( ".." );
+		if( cue.ramp && valueRange != std::string::npos )
+		{
+			cue.first  = std::strtof( value.substr( 0, valueRange ).c_str(), nullptr );
+			cue.second = std::strtof( value.substr( valueRange + 2 ).c_str(), nullptr );
+		}
+		else if( value.find_first_not_of( "0123456789.-+eE" ) != std::string::npos )
+		{
+			cue.text      = true;
+			cue.textValue = value;
+			cue.ramp      = false;
+		}
+		else
+		{
+			cue.first = cue.second = std::strtof( value.c_str(), nullptr );
+			cue.ramp  = false;
+		}
+
+		cues.push_back( cue );
+	}
+
+	fclose( file );
+	return true;
+}
+
+int renderSequence( const std::string& directory,
+                    const std::string& cuePath,
+                    int width,
+                    int height,
+                    double seconds,
+                    double fps,
+                    bool effect )
+{
+	std::vector< Cue > cues;
+	if( !cuePath.empty() && !parseCues( cuePath, cues ) )
+		return 1;
+
+	DownpourPlugin plugin( effect );
+	const std::map< std::string, unsigned int > byName = parameterIndex( plugin );
+
+	for( const Cue& cue : cues )
+	{
+		if( byName.find( cue.name ) == byName.end() )
+		{
+			std::fprintf( stderr, "cue names '%s', which is not a parameter\n", cue.name.c_str() );
+			return 1;
+		}
+	}
+
+	Target target      = makeTarget( width, height, false );
+	const GLuint input = effect ? makeInputTexture( width, height ) : 0;
+
+	const int frames = static_cast< int >( seconds * fps + 0.5 );
+	int written      = 0;
+
+	for( int frame = 0; frame < frames; ++frame )
+	{
+		const double now = static_cast< double >( frame ) / fps;
+
+		// Apply every cue whose window has started. Cues are applied in file
+		// order each frame rather than tracked as state, so a later cue on the
+		// same parameter simply wins -- which is what reading the sheet top to
+		// bottom would lead you to expect.
+		for( const Cue& cue : cues )
+		{
+			if( now < cue.from )
+				continue;
+
+			const unsigned int index = byName.at( cue.name );
+
+			if( cue.text )
+			{
+				plugin.SetTextParameter( index, cue.textValue.c_str() );
+				plugin.Invalidate();
+				continue;
+			}
+
+			float value = cue.second;
+			if( cue.ramp && now < cue.to && cue.to > cue.from )
+			{
+				const double t = ( now - cue.from ) / ( cue.to - cue.from );
+				// Smoothstep rather than linear. A parameter that starts and
+				// stops abruptly reads as a jump cut even when the value in
+				// between is right.
+				const double eased = t * t * ( 3.0 - 2.0 * t );
+				value = static_cast< float >( cue.first + ( cue.second - cue.first ) * eased );
+			}
+
+			plugin.SetFloatParameter( index, value );
+			if( index == PT_SOURCE || index == PT_CHARSET || index == PT_FONT )
+				plugin.Invalidate();
+		}
+
+		if( !render( plugin, target, now, input ) )
+		{
+			std::fprintf( stderr, "frame %d failed\n", frame );
+			releaseTarget( target );
+			return 1;
+		}
+
+		char path[ 1024 ];
+		std::snprintf( path, sizeof( path ), "%s/frame%05d.png", directory.c_str(), frame );
+
+		const std::vector< unsigned char > pixels = readBytes( target );
+		const std::vector< unsigned char > image  = flipRows( pixels, width, height );
+		if( !writePng( path, width, height, image ) )
+		{
+			std::fprintf( stderr, "could not write %s\n", path );
+			releaseTarget( target );
+			return 1;
+		}
+
+		++written;
+		if( written % 60 == 0 )
+			std::printf( "  %d / %d frames\n", written, frames );
+	}
+
+	releaseTarget( target );
+	if( input != 0 )
+		glDeleteTextures( 1, &input );
+	plugin.DeInitGL();
+
+	std::printf( "wrote %d frames to %s at %g fps (%.1f seconds)\n", written, directory.c_str(), fps,
+	             written / fps );
+	return 0;
+}
 } // namespace
 
 int main( int argc, char** argv )
@@ -958,6 +1177,10 @@ int main( int argc, char** argv )
 	bool doRain   = false;
 	bool doRead   = false;
 	bool doEffect = false;
+	std::string sequenceDir;
+	std::string cueSheet;
+	double seconds = 45.0;
+	double fps     = 30.0;
 
 	for( int i = 1; i < argc; ++i )
 	{
@@ -985,6 +1208,10 @@ int main( int argc, char** argv )
 		// over a synthetic clip. Mix and the compositing order have no coverage
 		// at all without it, and they are half of what the second bundle is for.
 		else if( arg == "--effect" ) doEffect = true;
+		else if( arg == "--sequence" ) sequenceDir = value( "--sequence" );
+		else if( arg == "--script" )   cueSheet = value( "--script" );
+		else if( arg == "--seconds" )  seconds = std::strtod( value( "--seconds" ).c_str(), nullptr );
+		else if( arg == "--fps" )      fps = std::strtod( value( "--fps" ).c_str(), nullptr );
 		else
 		{
 			std::fprintf( stderr, "unknown argument '%s'\n", arg.c_str() );
@@ -992,12 +1219,14 @@ int main( int argc, char** argv )
 		}
 	}
 
-	if( outPath.empty() && atlasPath.empty() && !doList && !doFont && !doRain && !doRead )
+	if( outPath.empty() && atlasPath.empty() && sequenceDir.empty() && !doList && !doFont && !doRain && !doRead )
 	{
 		std::fprintf( stderr,
 		              "usage: dptest [--out PATH] [--atlas PATH] [--list] [--font] [--rain]\n"
 		              "              [--readback] [--effect] [--time T] [--width W] [--height H]\n"
-		              "              [--set Name=value]...\n" );
+		              "              [--set Name=value]...\n"
+		              "       dptest --sequence DIR --script CUES [--seconds S] [--fps F]\n"
+		              "              [--effect] [--width W] [--height H]\n" );
 		return 2;
 	}
 
@@ -1021,6 +1250,9 @@ int main( int argc, char** argv )
 		std::printf( "--readback: a document through the atlas and back\n" );
 		status |= readbackCheck();
 	}
+
+	if( !sequenceDir.empty() )
+		status |= renderSequence( sequenceDir, cueSheet, width, height, seconds, fps, doEffect );
 
 	if( !outPath.empty() || !atlasPath.empty() || doList || doFont )
 	{

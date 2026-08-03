@@ -1,0 +1,82 @@
+# The project video, as a cue sheet.
+#
+# Every frame is the real plugin rendering through the real FFGL sequence -- this
+# is the effect being *operated*, not a mock-up. Render with:
+#
+#   ./build/dptest --sequence /tmp/dp-frames --script tools/video.cues \
+#                  --width 1920 --height 1080 --seconds 45 --fps 30
+#
+# Syntax: `T Name=V` sets at a time, `T1..T2 Name=V1..V2` ramps between two
+# (eased, because a parameter that starts and stops abruptly reads as a cut).
+#
+# The order of the piece is the order of the README: what it looks like, then
+# what it can read, then what it can read it in.
+
+# ---------------------------------------------------------------- 0s: the look
+0.0   Columns=0.60
+0.0   Speed=0.50
+0.0   Trail=0.42
+0.0   Density=0.88
+0.0   Mutation=0.55
+0.0   Fade=0.62
+0.0   Glow=0.28
+0.0   Source=0
+0.0   Characters=1
+0.0   Mirror Glyphs=1.0
+
+# Open sparse and fill in, so the first thing the eye gets is a single column
+# falling rather than a wall.
+0.0..4.0    Density=0.25..0.88
+
+# ------------------------------------------------- 6s: the head is the effect
+# Take the head boost off and put it back. This is the clearest thing the video
+# can say: without the bright leading glyph the whole thing reads as a
+# screensaver, and it comes back in three seconds later.
+6.0..8.0    Head Boost=1.0..0.0
+10.0..12.0  Head Boost=0.0..1.0
+
+# ------------------------------------------------------ 13s: speed and density
+13.0..17.0  Speed=0.50..0.78
+13.0..17.0  Trail=0.42..0.72
+17.0..20.0  Speed=0.78..0.44
+
+# ------------------------------------------------------------ 20s: it is a grid
+# Wind the column count down far enough that the glyphs are unmistakably drawn
+# characters rather than a texture, then back.
+20.0..24.0  Columns=0.60..0.24
+24.0..27.0  Columns=0.24..0.62
+
+# ------------------------------------------------------ 28s: it reads your code
+# Junk becomes generated code. Unmirror, slow the churn right down, and go blue
+# so the change of material is unmistakable.
+28.0  Source=1
+28.0  Mirror Glyphs=0.0
+28.0..29.5  Mutation=0.55..0.0
+28.0..30.0  Text=0.30..0.58
+28.0..30.0  Text_Green=1.00..0.92
+28.0..30.0  Text_Blue=0.42..1.00
+28.0..30.0  Speed=0.44..0.36
+28.0..30.0  Columns=0.62..0.52
+
+# --------------------------------------------------------- 34s: it reads a book
+# Plato's cave, in amber, played out in order.
+34.0  Source=3
+34.0..36.0  Text=0.58..0.98
+34.0..36.0  Text_Green=0.92..0.80
+34.0..36.0  Text_Blue=1.00..0.48
+34.0..36.0  Columns=0.52..0.45
+34.0..36.0  Trail=0.72..0.86
+34.0..36.0  Speed=0.36..0.32
+
+# ------------------------------------------------------------- 41s: back to green
+41.0  Source=0
+41.0  Mirror Glyphs=1.0
+41.0..43.0  Text=0.98..0.30
+41.0..43.0  Text_Green=0.80..1.00
+41.0..43.0  Text_Blue=0.48..0.42
+41.0..43.0  Mutation=0.0..0.55
+41.0..43.0  Columns=0.45..0.60
+41.0..43.0  Speed=0.32..0.50
+
+# Fade the rain out on the last beat rather than cutting.
+43.0..45.0  Text Opacity=1.0..0.0

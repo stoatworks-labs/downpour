@@ -18,6 +18,41 @@ Arena and Avenue, as a pair of FFGL plugins.
 <sub>The default: mirrored half-width katakana, green on black, sixty columns.
 Rendered by `dptest`, the offline harness.</sub>
 
+<!-- downloads:start -->
+
+## Download
+
+**[v0.1.0](https://github.com/stoatworks-labs/downpour/releases/tag/v0.1.0)** — prebuilt for macOS and Windows. Pick your platform:
+
+<details>
+<summary><b>macOS</b> — Universal (Apple Silicon + Intel)</summary>
+
+| Build | Download | Size |
+| --- | --- | --- |
+| Universal (Apple Silicon + Intel) · .dmg disk image | [`downpour-0.1.0-macos-universal.dmg`](https://github.com/stoatworks-labs/downpour/releases/download/v0.1.0/downpour-0.1.0-macos-universal.dmg) | 930 KB |
+| Universal (Apple Silicon + Intel) · .zip archive | [`downpour-macos-universal.zip`](https://github.com/stoatworks-labs/downpour/releases/latest/download/downpour-macos-universal.zip) | 559 KB |
+
+</details>
+
+<details>
+<summary><b>Windows</b> — x64</summary>
+
+| Build | Download | Size |
+| --- | --- | --- |
+| x64 · .exe installer | [`downpour-0.1.0-windows-x86_64-setup.exe`](https://github.com/stoatworks-labs/downpour/releases/download/v0.1.0/downpour-0.1.0-windows-x86_64-setup.exe) | 278 KB |
+| x64 · .zip archive | [`downpour-windows-x86_64.zip`](https://github.com/stoatworks-labs/downpour/releases/latest/download/downpour-windows-x86_64.zip) | 343 KB |
+
+</details>
+
+All builds, checksums and release notes: [github.com/stoatworks-labs/downpour/releases](https://github.com/stoatworks-labs/downpour/releases).
+
+<!-- downloads:end -->
+
+Both plugins are in every download — drop them into
+`~/Documents/Resolume Arena/Extra Effects` (or the Avenue equivalent) and restart
+Resolume. **The macOS build is not notarised**, so the first launch needs a
+right-click → Open, or a trip through System Settings → Privacy & Security.
+
 ## Two plugins
 
 | | |
@@ -99,18 +134,6 @@ and opacity, Glow.
 
 The head colour is worth finding early. The bright leading character is most of
 what reads as digital rain rather than as a screensaver.
-
-## Download
-
-Grab the latest build from
-[Releases](https://github.com/stoatworks-labs/downpour/releases):
-
-- **macOS** — universal, so it loads in both Apple Silicon and Intel builds of
-  Resolume.
-- **Windows** — installer, or a `.zip` if you would rather place the `.dll`
-  yourself.
-
-The macOS build is **not notarised**.
 
 ## Status
 
