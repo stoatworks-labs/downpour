@@ -181,6 +181,23 @@ private:
 	char textReturn[ 4096 ] = { 0 };
 
 	//---------------------------------------------------------------------
+	// Host clock units.
+	//
+	// The FFGL header never says what unit SetTime is in, and hosts disagree:
+	// Resolume hands over MILLISECONDS (measured live: 20.0 per frame at its
+	// 50 fps, and the SDK's own Particles sample divides by 1000), while the
+	// offline harness sends seconds. UpdateClock decides from the first
+	// plausible frame delta and sticks: 0.001..0.5 is a seconds-host frame,
+	// 2..500 is a milliseconds-host frame, anything else keeps waiting.
+	// `hostSeconds` is the normalised clock everything downstream reads.
+	//---------------------------------------------------------------------
+	void UpdateClock();
+
+	double clockScale  = 0.0;///< 0 until decided; then 1.0 or 0.001
+	double lastRawTime = -1.0;
+	double hostSeconds = 0.0;
+
+	//---------------------------------------------------------------------
 	// Audio.
 	//
 	// The host writes one spectrum bin per element of PT_AUDIO; UpdateAudio

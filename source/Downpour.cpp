@@ -502,15 +502,31 @@ double RainClock( double seconds, float bpm, float barPhase, SyncMode mode )
 }
 } // namespace
 
+void DownpourPlugin::UpdateClock()
+{
+	const double raw = hostTime;
+	if( clockScale == 0.0 && lastRawTime >= 0.0 && raw > lastRawTime )
+	{
+		const double d = raw - lastRawTime;
+		if( d >= 0.001 && d <= 0.5 )
+			clockScale = 1.0;
+		else if( d >= 2.0 && d <= 500.0 )
+			clockScale = 0.001;
+	}
+	lastRawTime = raw;
+	hostSeconds = raw * ( clockScale == 0.0 ? 1.0 : clockScale );
+}
+
 void DownpourPlugin::UpdateAudio()
 {
 	const ParamInfo* info = FindParamInfo( PT_AUDIO );
 	if( info == nullptr )
 		return;
 
-	// Frame delta for the release filter, off the same clock everything else
-	// runs on. First frame -- or a clock that has not moved -- snaps instead.
-	const double now = hostTime;
+	// Frame delta for the release filter, off the normalised clock UpdateClock
+	// just advanced, so the ms-vs-seconds question is already settled. First
+	// frame -- or a clock that has not moved -- snaps instead.
+	const double now = hostSeconds;
 	const double dt  = ( audioClock >= 0.0 && now > audioClock ) ? now - audioClock : 0.0;
 	audioClock       = now;
 
@@ -537,7 +553,7 @@ RainState DownpourPlugin::CurrentState( int width, int height ) const
 	const SyncMode sync = static_cast< SyncMode >( OptionFromParam( params[ PT_SYNC ], static_cast< int >( SyncMode::Count ) ) );
 
 	RainState state;
-	state.time      = static_cast< float >( RainClock( hostTime, bpm, barPhase, sync ) );
+	state.time      = static_cast< float >( RainClock( hostSeconds, bpm, barPhase, sync ) );
 	state.audioLevel = params[ PT_AUDIO_LEVEL ];
 	state.audio      = audioLevel;
 	state.columns   = ColumnsFromParam( params[ PT_COLUMNS ] );
@@ -663,6 +679,7 @@ void DownpourPlugin::Render( int width, int height, GLuint inputTexture, float m
 		uploadDirty = false;
 	}
 
+	UpdateClock();
 	UpdateAudio();
 
 	const RainState state = CurrentState( width, height );
