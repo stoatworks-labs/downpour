@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "Controls.h"
+#include "Presets.h"
 #include "Rain.h"
 #include "TextSource.h"
 #include "Typeface.h"
@@ -99,6 +100,20 @@ public:
 	void EnableCellDebug() { cellDebug = true; }
 
 private:
+	/// The ParamId each presets::Param drives, in presets::Param order. The
+	/// preset table stays host-agnostic; this is the FFGL binding of it.
+	static constexpr unsigned int kPresetParamIDs[ presets::kParamCount ] = {
+		PT_SPEED, PT_DIRECTION, PT_COLUMNS, PT_TRAIL, PT_DENSITY, PT_MUTATE, PT_FALLOFF,
+		PT_SOURCE, PT_CHARSET, PT_MIRROR, PT_GLYPH_SCALE,
+		PT_TEXT_R, PT_TEXT_G, PT_TEXT_B, PT_TEXT_OPACITY,
+		PT_HEAD_R, PT_HEAD_G, PT_HEAD_B, PT_HEAD_BOOST,
+		PT_BACK_R, PT_BACK_G, PT_BACK_B, PT_BACK_OPACITY, PT_GLOW
+	};
+
+	/// Copy a factory preset's values into params[] and raise value events so
+	/// the host re-reads the sliders. `presetIndex` is 1-based; 0 is Custom.
+	void applyPreset( int presetIndex );
+
 	void RebuildContent();
 	bool UploadAtlas();
 	bool UploadStream();

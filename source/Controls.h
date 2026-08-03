@@ -73,6 +73,10 @@ enum ParamId : unsigned int
 	// source plugin simply has nothing to mix against and ignores it.
 	PT_MIX,
 
+	// Preset. Declared after the real controls so their ids — which a saved
+	// composition refers to — do not shift under existing users.
+	PT_PRESET,
+
 	PT_COUNT
 };
 
