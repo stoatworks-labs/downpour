@@ -22,6 +22,23 @@ Rendered by `dptest`, the offline harness.</sub>
 
 <!-- downloads:start -->
 
+## Try it in your browser
+
+**<https://downpour-demo.stoatworks-labs.com>**
+
+Not the plugin — the GLSL from `source/Shaders.cpp`, copied across unedited and run in
+WebGL2 over clips generated in the page, with the parameters this plugin's
+constructor declares and the conversions its own code applies. No install, and
+nothing you load leaves your machine.
+
+Both bundles are there — the source and the effect, compiled from one shader the same two ways this repository builds them. The drawn face and the four public domain passages come straight out of `source/GlyphData.cpp` and `texts/`.
+
+It is a port, so it is not evidence about the plugin: a browser is not Resolume,
+GLSL ES 3.00 is not desktop GL 4.1 core, and nothing on that page measures
+anything. The page says all of that itself, in a disclosure at the foot. The
+numbers worth trusting are in [Status](#status) and come from the offline
+harness in this repository.
+
 ## Download
 
 **[v0.1.0](https://github.com/stoatworks-labs/downpour/releases/tag/v0.1.0)** — prebuilt for macOS and Windows. Pick your platform:

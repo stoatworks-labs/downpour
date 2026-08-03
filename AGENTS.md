@@ -208,3 +208,42 @@ session is unreliable. Nothing in this repo has been loaded into Resolume yet.
 Related: [asciify](https://github.com/stoatworks-labs/asciify) (the glyph atlas,
 harness and CMake patterns came from there), old-cathode, porthole,
 resolume-luma-keyer.
+
+
+## The browser demo
+
+`demo/` is a static page at **downpour-demo.stoatworks-labs.com**: this
+plugin's own GLSL, ported to WebGL2, running on clips generated in the page with
+the parameters the constructor declares. It is deployed as a Cloudflare Worker
+serving `demo/` as static assets (`wrangler.toml`), with **no build step** — what
+is committed is what is served.
+
+Three things about it are not visible from the files:
+
+- **`demo/plugin.js` carries a second copy of the shader.** The demo cannot
+  include a C++ file, so the GLSL from `source/Shaders.cpp` is duplicated there and
+  *nothing enforces that they agree*. Change the shader and change both, or the
+  page quietly goes on rendering the old maths.
+- **`demo/vendor/` is vendored, not authored here.** The master is
+  `stoatworks-backend/resolume-demo/`; fix it there and re-run its `sync.sh`.
+  `sync.sh --check` reports drift. A fix applied to the copy fixes one plugin out
+  of six.
+- **Verify a deploy by content, never by status code.** A wrong page still
+  answers 200.
+
+```bash
+cf-run npx wrangler deploy
+curl -s 'https://downpour-demo.stoatworks-labs.com/?cb=1' | grep -o '<title>[^<]*'
+```
+
+`demo/data.js` is generated from `source/GlyphData.cpp` and `texts/` by
+`demo/tools/extract_data.py` (`--check` reports staleness). Note the trap
+that script documents: the glyph array keys are **both** hex codepoints
+and character literals, and matching only the hex spelling yields 49 of
+the 140 glyphs — an atlas missing its entire ASCII half, which reads as a
+broken character set rather than a broken parser.
+
+The page is emphatic that it is not the plugin, and lists what it does not
+reproduce in a disclosure at the foot. Keep that: it is a port, so nothing on it
+is evidence about the plugin, and the offline harness in this repository is
+still the only thing that measures anything.
