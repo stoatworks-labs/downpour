@@ -13,6 +13,8 @@
 Falling columns of characters — digital rain — for [Resolume](https://resolume.com)
 Arena and Avenue, as a pair of FFGL plugins.
 
+**Video:** [What it does, in 45 seconds](https://www.youtube.com/watch?v=Sdvmpz_GiTo)
+
 ![Katakana rain on black](docs/hero.png)
 
 <sub>The default: mirrored half-width katakana, green on black, sixty columns.
