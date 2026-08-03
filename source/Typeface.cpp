@@ -13,6 +13,14 @@
 #include "stb_truetype.h"
 
 #if defined( _WIN32 )
+	// windows.h defines min and max as macros, which turns the std::min calls in
+	// BuildAtlas below into `std::(...)`. The error names neither min nor
+	// windows.h -- it is `C2589: '(': illegal token on right side of '::'` --
+	// and it only ever appears on the Windows build. CMakeLists sets this
+	// globally too; it is repeated here so the file is correct on its own.
+	#ifndef NOMINMAX
+		#define NOMINMAX
+	#endif
 	#include <windows.h>
 #else
 	#include <dirent.h>

@@ -37,6 +37,20 @@ if(MSVC)
     add_compile_options(/utf-8)
 endif()
 
+# windows.h defines min and max as macros, which turns every std::min into
+# `std::(...)` and fails with an error that names neither min nor windows.h:
+#
+#   error C2589: '(': illegal token on right side of '::'
+#
+# Typeface.cpp needs windows.h for the font-directory walk and std::min for the
+# glyph fit, so it hits this. Set globally rather than per-file because the next
+# file to include windows.h will hit it too, and the error gives no hint what
+# happened. Only ever seen on the Windows build -- which is to say only in CI,
+# after macOS has already gone green.
+if(WIN32)
+    add_compile_definitions(NOMINMAX)
+endif()
+
 option(DOWNPOUR_BUILD_TOOLS "Build the offline render and measurement harness" ON)
 
 # ---------------------------------------------------------------------------
