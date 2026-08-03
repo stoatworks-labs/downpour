@@ -91,7 +91,7 @@ jobs:
           if [ "${{ runner.os }}" = "macOS" ]; then
             cp -R "build/Downpour.ofx.bundle" "ofxout/Downpour.ofx.bundle"
             lipo -archs "ofxout/Downpour.ofx.bundle/Contents/MacOS/Downpour.ofx"
-            nm -gU "ofxout/Downpour.ofx.bundle/Contents/MacOS/Downpour.ofx" | grep -q "_OfxGetPlugin"
+            nm -gU "ofxout/Downpour.ofx.bundle/Contents/MacOS/Downpour.ofx" | grep "_OfxGetPlugin" >/dev/null
             codesign --force --sign - --timestamp=none "ofxout/Downpour.ofx.bundle"
           else
             mkdir -p "ofxout/Downpour.ofx.bundle/Contents/Win64"
