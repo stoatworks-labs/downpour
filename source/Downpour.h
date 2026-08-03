@@ -2,6 +2,7 @@
 
 #include <FFGLSDK.h>
 
+#include <array>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -178,6 +179,18 @@ private:
 	bool fontIndexChosen = false;
 
 	char textReturn[ 4096 ] = { 0 };
+
+	//---------------------------------------------------------------------
+	// Audio.
+	//
+	// The host writes one spectrum bin per element of PT_AUDIO; UpdateAudio
+	// runs them through an attack/release filter into `audioLevel`, and
+	// CurrentState hands that to the rain as its per-column gate.
+	//---------------------------------------------------------------------
+	void UpdateAudio();
+
+	std::array< float, kAudioBins > audioLevel = {};
+	double audioClock = -1.0;
 
 	float params[ PT_COUNT ] = { 0.0f };
 };

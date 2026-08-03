@@ -35,6 +35,8 @@ uniform float Trail;         //trail length as a fraction of the run
 uniform float Density;       //fraction of columns carrying a drop
 uniform float Mutate;        //glyph changes per second
 uniform float Falloff;       //brightness exponent along the trail
+uniform float Audio[ 64 ];   //smoothed spectrum, low frequencies first
+uniform float AudioLevel;    //0 ignores the spectrum entirely
 uniform uint  Seed;
 uniform int   DirectionMode; //0 down, 1 up, 2 right, 3 left
 uniform int   FlowMode;      //0 scatter, 1 sequence
@@ -176,6 +178,17 @@ CellResult EvaluateCell( ivec2 cellIndex )         //= mirrored
 	float along = distance / trailRows;
 	result.brightness = pow( clamp( 1.0 - along, 0.0, 1.0 ), Falloff );
 	result.head       = 1.0 - smoothstep( 0.0, kHeadRows, distance );
+
+	//Audio: a per-column brightness gate from the host's FFT.        //= mirrored
+	if( AudioLevel > 0.0 )
+	{
+		int columnCount = horizontal ? rows : columns;
+		float across    = columnCount > 1 ? float( column ) / float( columnCount - 1 ) : 0.0;
+		int bin         = min( 63, int( across * 64.0 ) );
+		float gate      = mix( 1.0, Audio[ bin ], AudioLevel );
+		result.brightness *= gate;
+		result.head *= gate;
+	}
 
 	if( FlowMode == 1 )                                              //= mirrored
 	{

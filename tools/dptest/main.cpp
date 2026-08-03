@@ -309,6 +309,26 @@ bool render( DownpourPlugin& plugin, const Target& target, double time, GLuint i
 
 	plugin.SetTime( time );
 
+	// A synthetic transport to go with the synthetic clock: 120 BPM in 4/4
+	// from time zero, so bar N starts at exactly 2N seconds and the Beat and
+	// Bar sync modes are as reproducible offline as Free is. Left at the
+	// SDK's defaults, barPhase would sit frozen at zero and the synced rain
+	// would step once a bar instead of kicking every beat.
+	constexpr double kBarSeconds = 2.0;
+	plugin.SetBeatInfo( 120.0f, static_cast< float >( std::fmod( time, kBarSeconds ) / kBarSeconds ) );
+
+	// A synthetic spectrum too, written the way the host writes one: one value
+	// per element of the Audio buffer. Without it Audio Level measurably does
+	// nothing offline and the sweep would report it dead. A fixed shape rather
+	// than anything time-driven, so renders stay reproducible: bass-heavy like
+	// programme material, with a ripple so neighbouring columns differ.
+	for( int bin = 0; bin < kAudioBins; ++bin )
+	{
+		const float across = static_cast< float >( bin ) / static_cast< float >( kAudioBins - 1 );
+		const float level  = 0.7f * ( 1.0f - across ) * ( 1.0f - across ) + 0.2f * ( 0.5f + 0.5f * std::sin( 25.0f * across ) );
+		plugin.SetParamElementValue( PT_AUDIO, static_cast< unsigned int >( bin ), level );
+	}
+
 	FFGLTextureStruct inputStruct {};
 	inputStruct.Width = inputStruct.HardwareWidth = static_cast< FFUInt32 >( target.width );
 	inputStruct.Height = inputStruct.HardwareHeight = static_cast< FFUInt32 >( target.height );
@@ -488,6 +508,7 @@ int listParameters( DownpourPlugin& plugin )
 		{ FF_TYPE_OPTION, "option" },     { FF_TYPE_TEXT, "text" },
 		{ FF_TYPE_FILE, "file" },         { FF_TYPE_RED, "red" },
 		{ FF_TYPE_GREEN, "green" },       { FF_TYPE_BLUE, "blue" },
+		{ FF_TYPE_BUFFER, "buffer" },
 	};
 
 	std::printf( "%-4s %-22s %-10s %s\n", "id", "name", "type", "value" );
@@ -535,20 +556,26 @@ int rainCheck()
 		float trail;
 		float density;
 		float mutate;
+		float audioLevel;
 	};
 
 	// Deliberately awkward: a wrapped drop, an odd aspect, every direction, and
 	// mutation both on and off, because the mutate branch and the drop branch
 	// are the two places the two implementations could disagree.
 	const Case cases[] = {
-		{ "down, 1080p",       1920, 1080,  3.25, 0.59f, 0.0f, 0.52f, 0.43f, 0.85f, 0.55f },
-		{ "down, 720p",        1280,  720,  3.25, 0.59f, 0.0f, 0.52f, 0.43f, 0.85f, 0.55f },
-		{ "down, 4K",          3840, 2160,  3.25, 0.59f, 0.0f, 0.52f, 0.43f, 0.85f, 0.55f },
-		{ "up",                1920, 1080, 61.75, 0.42f, 1.0f, 0.70f, 0.60f, 1.00f, 0.00f },
-		{ "right",             1600,  900, 12.50, 0.35f, 2.0f, 0.40f, 0.30f, 0.70f, 0.80f },
-		{ "left",               900, 1600, 91.70, 0.80f, 3.0f, 0.65f, 0.90f, 0.50f, 0.20f },
-		{ "still glyphs",      1920, 1080, 44.10, 0.59f, 0.0f, 0.30f, 0.50f, 1.00f, 0.00f },
-		{ "dense, long trail", 1280,  720, 155.9, 0.70f, 0.0f, 0.85f, 1.00f, 1.00f, 0.95f },
+		{ "down, 1080p",       1920, 1080,  3.25, 0.59f, 0.0f, 0.52f, 0.43f, 0.85f, 0.55f, 0.0f },
+		{ "down, 720p",        1280,  720,  3.25, 0.59f, 0.0f, 0.52f, 0.43f, 0.85f, 0.55f, 0.0f },
+		{ "down, 4K",          3840, 2160,  3.25, 0.59f, 0.0f, 0.52f, 0.43f, 0.85f, 0.55f, 0.0f },
+		{ "up",                1920, 1080, 61.75, 0.42f, 1.0f, 0.70f, 0.60f, 1.00f, 0.00f, 0.0f },
+		{ "right",             1600,  900, 12.50, 0.35f, 2.0f, 0.40f, 0.30f, 0.70f, 0.80f, 0.0f },
+		{ "left",               900, 1600, 91.70, 0.80f, 3.0f, 0.65f, 0.90f, 0.50f, 0.20f, 0.0f },
+		{ "still glyphs",      1920, 1080, 44.10, 0.59f, 0.0f, 0.30f, 0.50f, 1.00f, 0.00f, 0.0f },
+		{ "dense, long trail", 1280,  720, 155.9, 0.70f, 0.0f, 0.85f, 1.00f, 1.00f, 0.95f, 0.0f },
+		//The audio gate is mirrored arithmetic like everything above, so it
+		//gets a case: full Audio Level over the synthetic spectrum, on a
+		//horizontal run so the column-count remap is exercised too.
+		{ "audio gate",        1920, 1080,  3.25, 0.59f, 0.0f, 0.52f, 0.43f, 0.85f, 0.55f, 1.0f },
+		{ "audio gate, right", 1600,  900, 12.50, 0.35f, 2.0f, 0.40f, 0.30f, 0.70f, 0.80f, 1.0f },
 	};
 
 	int failures = 0;
@@ -566,6 +593,7 @@ int rainCheck()
 		plugin.SetFloatParameter( PT_TRAIL, c.trail );
 		plugin.SetFloatParameter( PT_DENSITY, c.density );
 		plugin.SetFloatParameter( PT_MUTATE, c.mutate );
+		plugin.SetFloatParameter( PT_AUDIO_LEVEL, c.audioLevel );
 
 		Target target = makeTarget( c.width, c.height, true );
 		if( !render( plugin, target, c.time ) )

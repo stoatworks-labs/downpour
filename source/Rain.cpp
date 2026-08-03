@@ -177,6 +177,24 @@ Cell Evaluate( const RainState& state, int x, int y )//= mirrored
 	cell.head         = 1.0f - SmoothStep( 0.0f, kHeadRows, distance );
 
 	//---------------------------------------------------------------------
+	// Audio: a per-column brightness gate from the host's FFT. Column order
+	// is band order, low frequencies first, so the bass end of the frame
+	// flares on the kick. The head is gated too -- a column whose band is
+	// silent must not keep a bright leading glyph.
+	//---------------------------------------------------------------------
+	if( state.audioLevel > 0.0f )//= mirrored
+	{
+		const int columnCount = horizontal ? state.rows : state.columns;
+		const float across    = columnCount > 1
+		    ? static_cast< float >( column ) / static_cast< float >( columnCount - 1 )
+		    : 0.0f;
+		const int bin    = std::min( 63, static_cast< int >( across * 64.0f ) );
+		const float gate = Mix( 1.0f, state.audio[ static_cast< size_t >( bin ) ], state.audioLevel );
+		cell.brightness *= gate;
+		cell.head *= gate;
+	}
+
+	//---------------------------------------------------------------------
 	// Which character.
 	//---------------------------------------------------------------------
 	if( state.flow == Flow::Sequence )

@@ -76,6 +76,8 @@ DownpourPlugin::DownpourPlugin( bool overInput_ ) :
 	params[ PT_MIX ] = 1.0f;
 
 	params[ PT_PRESET ] = 0.0f;//Custom: the sliders are the truth
+	params[ PT_SYNC ]   = 0.0f;//Free: v0.1.0's behaviour, and the harness's
+	params[ PT_AUDIO_LEVEL ] = 0.0f;
 
 	customText = "Wake up...";
 
@@ -166,6 +168,24 @@ DownpourPlugin::DownpourPlugin( bool overInput_ ) :
 	for( int i = 0; i < presets::kCount; ++i )
 		SetParamElementInfo( PT_PRESET, 1 + i, presets::kPresets[ i ].name, static_cast< float >( 1 + i ) );
 
+	// What Speed and Mutation are measured against: per second (Free), or per
+	// beat or per bar, locked to Resolume's BPM clock with the travel eased in
+	// hard at the front of each interval so the rain kicks on the grid.
+	SetOptionParamInfo( PT_SYNC, "Sync", static_cast< int >( SyncMode::Count ), params[ PT_SYNC ] );
+	SetParamElementInfo( PT_SYNC, 0, "Free", 0.0f );
+	SetParamElementInfo( PT_SYNC, 1, "Beat", 1.0f );
+	SetParamElementInfo( PT_SYNC, 2, "Bar", 2.0f );
+
+	// Audio. An FFT buffer: Resolume shows it as an audio-source picker and
+	// writes one spectrum bin per element. Element defaults are zero on
+	// purpose -- with no audio routed, Audio Level does nothing rather than
+	// the rain twitching to a phantom signal.
+	SetBufferParamInfo( PT_AUDIO, "Audio", kAudioBins, FF_USAGE_FFT );
+	for( int i = 0; i < kAudioBins; ++i )
+		SetParamElementInfo( PT_AUDIO, i, "", 0.0f );
+
+	SetParamInfof( PT_AUDIO_LEVEL, "Audio Level", FF_TYPE_STANDARD );
+
 	// Thirty parameters is well past the point where an ungrouped list in
 	// somebody else's inspector stops being readable. SetParamGroup collapses
 	// *runs* of same-group parameters, which is why the ids in Controls.h have
@@ -180,6 +200,12 @@ DownpourPlugin::DownpourPlugin( bool overInput_ ) :
 		SetParamGroup( id, "Colour" );
 	SetParamGroup( PT_MIX, "Output" );
 	SetParamGroup( PT_PRESET, "Preset" );
+	// Not "Rain", where it logically belongs: SetParamGroup collapses *runs* of
+	// consecutive ids, and PT_SYNC is appended, so it would show as a second
+	// group also titled "Rain" -- which reads as a bug.
+	SetParamGroup( PT_SYNC, "Tempo" );
+	SetParamGroup( PT_AUDIO, "Audio" );
+	SetParamGroup( PT_AUDIO_LEVEL, "Audio" );
 }
 
 //---------------------------------------------------------------------------
@@ -440,10 +466,80 @@ int DownpourPlugin::SlotForCodepoint( uint32_t codepoint ) const
 	return found == slotForCodepoint.end() ? -1 : found->second;
 }
 
+namespace
+{
+/// The clock the rain runs on, in whatever unit Speed is measured against.
+///
+/// Free is the host's clock, in seconds. Beat and Bar count beats or bars,
+/// recovered statelessly from the tempo and the position-in-bar the host hands
+/// us (the same recovery as Orrery and tinsel): the clock estimates how many
+/// bars have passed, `barPhase` gives the exact position inside this one, and
+/// the whole number reconciling the two is round( estimate - barPhase ) --
+/// continuous across the bar line, and exact while the estimate is within half
+/// a bar.
+///
+/// The synced clock's fractional part is raised to a small power, so most of
+/// each interval's travel happens at its front: the rain visibly *kicks* on
+/// the grid, which is the reason to sync it at all -- advanced evenly, a
+/// synced clock just looks like a different Speed. The exponent is a look,
+/// not a calibration: 0.3 reads as a kick without the motion ever stopping.
+double RainClock( double seconds, float bpm, float barPhase, SyncMode mode )
+{
+	if( mode == SyncMode::Free )
+		return seconds;
+
+	const double tempo      = bpm > 1.0f ? static_cast< double >( bpm ) : 120.0;
+	const double barSeconds = 240.0 / tempo;//four beats to the bar
+	const double estimate   = seconds / barSeconds;
+	const double within     = std::clamp( static_cast< double >( barPhase ), 0.0, 1.0 );
+
+	const double bars  = within + std::round( estimate - within );
+	const double count = mode == SyncMode::Beat ? bars * 4.0 : bars;
+
+	double whole      = 0.0;
+	const double frac = std::modf( count, &whole );
+	return whole + std::pow( frac, 0.3 );
+}
+} // namespace
+
+void DownpourPlugin::UpdateAudio()
+{
+	const ParamInfo* info = FindParamInfo( PT_AUDIO );
+	if( info == nullptr )
+		return;
+
+	// Frame delta for the release filter, off the same clock everything else
+	// runs on. First frame -- or a clock that has not moved -- snaps instead.
+	const double now = hostTime;
+	const double dt  = ( audioClock >= 0.0 && now > audioClock ) ? now - audioClock : 0.0;
+	audioClock       = now;
+
+	// Fast up, slow down: a flare that arrives a frame late reads as broken,
+	// while one that takes ~150 ms to die away reads as intended.
+	const float release = dt > 0.0 ? 1.0f - std::exp( static_cast< float >( -dt / 0.15 ) ) : 1.0f;
+
+	const size_t bins = std::min( info->elements.size(), audioLevel.size() );
+	for( size_t i = 0; i < bins; ++i )
+	{
+		// sqrt because bin magnitudes bunch near zero: a spectrum used raw
+		// lights nothing but the kick drum's columns.
+		const float raw = std::sqrt( std::max( 0.0f, info->elements[ i ].value ) );
+
+		if( raw >= audioLevel[ i ] )
+			audioLevel[ i ] = raw;
+		else
+			audioLevel[ i ] += ( raw - audioLevel[ i ] ) * release;
+	}
+}
+
 RainState DownpourPlugin::CurrentState( int width, int height ) const
 {
+	const SyncMode sync = static_cast< SyncMode >( OptionFromParam( params[ PT_SYNC ], static_cast< int >( SyncMode::Count ) ) );
+
 	RainState state;
-	state.time      = static_cast< float >( hostTime );
+	state.time      = static_cast< float >( RainClock( hostTime, bpm, barPhase, sync ) );
+	state.audioLevel = params[ PT_AUDIO_LEVEL ];
+	state.audio      = audioLevel;
 	state.columns   = ColumnsFromParam( params[ PT_COLUMNS ] );
 	state.rows      = RowsForAspect( state.columns, width, height );
 	state.speed     = SpeedFromParam( params[ PT_SPEED ] );
@@ -567,6 +663,8 @@ void DownpourPlugin::Render( int width, int height, GLuint inputTexture, float m
 		uploadDirty = false;
 	}
 
+	UpdateAudio();
+
 	const RainState state = CurrentState( width, height );
 
 	ffglex::ScopedShaderBinding shaderBinding( shader.GetGLID() );
@@ -596,6 +694,10 @@ void DownpourPlugin::Render( int width, int height, GLuint inputTexture, float m
 	// through the raw uniform. A mismatch here is silent -- glUniform on -1 is
 	// a documented no-op -- which is what tools/sweep.py exists to catch.
 	glUniform1ui( glGetUniformLocation( shader.GetGLID(), "Seed" ), state.seed );
+
+	// The spectrum too: FFGLShader has no array setter.
+	shader.Set( "AudioLevel", state.audioLevel );
+	glUniform1fv( glGetUniformLocation( shader.GetGLID(), "Audio" ), kAudioBins, state.audio.data() );
 
 	shader.Set( "AtlasLayout", static_cast< float >( kAtlasCols ), static_cast< float >( kAtlasRows ) );
 	shader.Set( "AtlasSize", static_cast< float >( kAtlasPx ), static_cast< float >( kAtlasPx ) );

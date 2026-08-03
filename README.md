@@ -168,6 +168,19 @@ and opacity, Glow.
 
 **Output** — Mix (the effect variant: how the rain sits over the clip).
 
+**Tempo** — Sync (Free, Beat, Bar). Free runs Speed in rows per second on the
+host's clock. Beat and Bar lock the rain to Resolume's BPM: Speed becomes rows
+per beat or per bar, and each interval's travel is eased in hard at the front,
+so the rain visibly kicks on the grid rather than merely matching its average
+speed to it.
+
+**Audio** — Audio (an FFT input: pick an audio source on it in Resolume) and
+Audio Level. Each column is gated by its own slice of the spectrum, low
+frequencies at the left of the frame, so the bass end flares on the kick and
+the treble end shimmers with the hats. This is per-column: Resolume's own
+per-parameter audio link can pump one slider, but it cannot give sixty columns
+sixty different bands. FFGL only — OFX hosts have no audio analysis.
+
 The head colour is worth finding early. The bright leading character is most of
 what reads as digital rain rather than as a screensaver.
 

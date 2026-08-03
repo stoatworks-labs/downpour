@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 
 /**
@@ -92,6 +93,13 @@ struct RainState
 	/// Number of entries in the stream texture -- the alphabet in Scatter, the
 	/// document in Sequence.
 	int streamLength = 1;
+
+	/// Audio: a per-column brightness gate from the host's FFT. `audio` holds
+	/// smoothed spectrum bins, low frequencies first; `audioLevel` is how hard
+	/// a column is gated by its band. Zero -- the default, and all an OFX host
+	/// can provide -- leaves the rain exactly as it was.
+	float audioLevel = 0.0f;
+	std::array< float, 64 > audio = {};
 };
 
 /// What one cell resolved to.

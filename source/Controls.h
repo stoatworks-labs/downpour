@@ -77,7 +77,37 @@ enum ParamId : unsigned int
 	// composition refers to — do not shift under existing users.
 	PT_PRESET,
 
+	// Sync. Appended for the same reason: it arrived after v0.1.0 shipped, and
+	// inserting it next to Speed — where it belongs — would renumber every id
+	// after it in every saved composition.
+	PT_SYNC,
+
+	// Audio. Appended likewise. PT_AUDIO is an FFT buffer (FF_TYPE_BUFFER,
+	// FF_USAGE_FFT): Resolume shows it as an audio-source picker and writes
+	// one spectrum bin per element, low frequencies first. FFGL only; OFX
+	// hosts have no audio analysis and never see these.
+	PT_AUDIO,
+	PT_AUDIO_LEVEL,
+
 	PT_COUNT
+};
+
+/// Spectrum bins in the Audio buffer parameter, in RainState::audio, and in
+/// the shader's `Audio[]` uniform. All three must agree, and the shader's is
+/// a literal.
+constexpr int kAudioBins = 64;
+
+/// What Speed and Mutation are measured against. Free: per second, on the
+/// host's clock. Beat and Bar: per beat or per bar, locked to the host's BPM
+/// clock, with each interval's travel eased in hard at the front so the rain
+/// visibly kicks on the grid.
+enum class SyncMode : int
+{
+	Free = 0,
+	Beat,
+	Bar,
+
+	Count
 };
 
 /// Columns across the frame. 8..240, exponential.
@@ -88,8 +118,8 @@ int ColumnsFromParam( float value );
 /// oblong too, and the glyphs are the whole picture.
 int RowsForAspect( int columns, int width, int height );
 
-/// Rows per second. 0.5..45, exponential -- the slow end is where the useful
-/// resolution is.
+/// Rows per second -- or per beat or per bar under those Sync modes.
+/// 0.5..45, exponential -- the slow end is where the useful resolution is.
 float SpeedFromParam( float value );
 
 /// Trail length as a fraction of the run. 0.04..1.

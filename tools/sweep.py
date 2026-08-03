@@ -162,6 +162,13 @@ def main():
         font = next((f for f in SYSTEM_FONTS if pathlib.Path(f).exists()), None)
 
         for name, kind in found:
+            # An FFT buffer has no scalar value to sweep: its float value is
+            # meaningless, so sweeping it proves nothing and reports a false
+            # dead. dptest feeds every render a synthetic spectrum instead,
+            # and "Audio Level" is the sweepable proof the buffer is wired.
+            if kind == "buffer":
+                continue
+
             effect = name in EFFECT_ONLY
             extra = []
 
