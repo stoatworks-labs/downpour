@@ -19,6 +19,20 @@ handling.
 - Look at the glyph atlas: `./build/dptest --atlas /tmp/atlas.png`
 - Set anything by name: `--set "Columns=0.45" --set "Source=2"`
 
+## OpenFX build
+- `source/ofx/DownpourOFX.cpp` → `build/Downpour.ofx.bundle` (target `DownpourOFX`,
+  `-DBUILD_OFX=OFF` to skip): **both** plugins in one bundle — `com.stoatworks.downpour`
+  (generator) and `com.stoatworks.downpourover` (filter) — for Resolve/Nuke/Natron/Vegas.
+- Rain/stream/atlas/typeface code linked straight from source; only the fragment
+  shader's per-pixel machinery (glyph fit, atlas sampling, composite) is mirrored.
+- OFX time arrives in *frames*; the plugin divides by the clip frame rate to get
+  the seconds Rain.cpp wants.
+- Smoke test (ofxprobe only drives the Filter context, so the generator's
+  describe is checked but its render runs only in a real host):
+  `../resolume-ofx-bridge/build/ofxprobe --dir build --render com.stoatworks.downpourover --size 640x360 --out /tmp/d.bmp`
+- OFX SDK subset (BSD-3) vendored under `external/openfx`.
+- Install for Resolve: copy the bundle into `/Library/OFX/Plugins`.
+
 ## Verify
 - Everything: `tools/verify.sh`
 - Shader vs `Rain.cpp`: `./build/dptest --rain`

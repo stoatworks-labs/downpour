@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
 project(Downpour
-    VERSION 0.1.0
+    VERSION 0.2.0
     LANGUAGES CXX
 )
 
@@ -181,6 +181,69 @@ if(APPLE AND NOT CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 elseif(APPLE)
     set(CMAKE_INSTALL_PREFIX "$ENV{HOME}/Documents/Resolume Arena/Extra Effects"
         CACHE PATH "" FORCE)
+endif()
+
+# ---------------------------------------------------------------------------
+# The OpenFX builds — both plugins in one bundle — for Resolve/Nuke/Natron/
+# Vegas. CPU render against the vendored OFX SDK subset under external/openfx
+# (C headers + the official C++ Support library, BSD-3). The rain, stream,
+# atlas and typeface code is linked straight from source; only the fragment
+# shader's per-pixel machinery is mirrored in DownpourOFX.cpp.
+# ---------------------------------------------------------------------------
+option(BUILD_OFX "Build the OpenFX plugin" ON)
+
+if(BUILD_OFX)
+    set(OFX_SDK "${CMAKE_CURRENT_SOURCE_DIR}/external/openfx")
+
+    add_library(DownpourOFX MODULE
+        source/ofx/DownpourOFX.cpp
+        source/Controls.cpp
+        source/Corpus.cpp
+        source/Diag.cpp
+        source/GlyphData.cpp
+        source/Glyphs.cpp
+        source/Rain.cpp
+        source/TextSource.cpp
+        source/Typeface.cpp
+        ${OFX_SDK}/Support/Library/ofxsCore.cpp
+        ${OFX_SDK}/Support/Library/ofxsImageEffect.cpp
+        ${OFX_SDK}/Support/Library/ofxsInteract.cpp
+        ${OFX_SDK}/Support/Library/ofxsLog.cpp
+        ${OFX_SDK}/Support/Library/ofxsMultiThread.cpp
+        ${OFX_SDK}/Support/Library/ofxsParams.cpp
+        ${OFX_SDK}/Support/Library/ofxsProperty.cpp
+        ${OFX_SDK}/Support/Library/ofxsPropertyValidation.cpp
+    )
+    target_include_directories(DownpourOFX PRIVATE
+        "${OFX_SDK}/include"
+        "${OFX_SDK}/Support/include"
+    )
+    target_link_libraries(DownpourOFX PRIVATE stb_truetype)
+    target_compile_definitions(DownpourOFX PRIVATE
+        PLUGIN_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
+        PLUGIN_VERSION_MINOR=${PROJECT_VERSION_MINOR}
+    )
+
+    set(OFX_BUNDLE_DIR "${CMAKE_BINARY_DIR}/Downpour.ofx.bundle")
+    set_target_properties(DownpourOFX PROPERTIES
+        PREFIX ""
+        SUFFIX ".ofx"
+        OUTPUT_NAME "Downpour"
+        LIBRARY_OUTPUT_DIRECTORY "${OFX_BUNDLE_DIR}/Contents/MacOS"
+    )
+    if(APPLE)
+        configure_file(cmake/InfoOFX.plist.in
+            "${OFX_BUNDLE_DIR}/Contents/Info.plist" @ONLY)
+    elseif(WIN32)
+        set_target_properties(DownpourOFX PROPERTIES
+            LIBRARY_OUTPUT_DIRECTORY "${OFX_BUNDLE_DIR}/Contents/Win64"
+            RUNTIME_OUTPUT_DIRECTORY "${OFX_BUNDLE_DIR}/Contents/Win64"
+            LIBRARY_OUTPUT_DIRECTORY_RELEASE "${OFX_BUNDLE_DIR}/Contents/Win64"
+            RUNTIME_OUTPUT_DIRECTORY_RELEASE "${OFX_BUNDLE_DIR}/Contents/Win64")
+    else()
+        set_target_properties(DownpourOFX PROPERTIES
+            LIBRARY_OUTPUT_DIRECTORY "${OFX_BUNDLE_DIR}/Contents/Linux-x86-64")
+    endif()
 endif()
 
 install(TARGETS DownpourSource DownpourEffect

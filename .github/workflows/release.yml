@@ -85,6 +85,19 @@ jobs:
             cp "build/Release/Downpour.dll" "out/Downpour.dll"
             cp "build/Release/Downpour Over.dll" "out/Downpour Over.dll"
           fi
+          # OpenFX build: shipped as its own zip, not folded into the FFGL
+          # artefact — it installs to the OFX folder, not Resolume's.
+          mkdir -p ofxout
+          if [ "${{ runner.os }}" = "macOS" ]; then
+            cp -R "build/Downpour.ofx.bundle" "ofxout/Downpour.ofx.bundle"
+            lipo -archs "ofxout/Downpour.ofx.bundle/Contents/MacOS/Downpour.ofx"
+            nm -gU "ofxout/Downpour.ofx.bundle/Contents/MacOS/Downpour.ofx" | grep -q "_OfxGetPlugin"
+            codesign --force --sign - --timestamp=none "ofxout/Downpour.ofx.bundle"
+          else
+            mkdir -p "ofxout/Downpour.ofx.bundle/Contents/Win64"
+            cp "build/Downpour.ofx.bundle/Contents/Win64/Downpour.ofx" "ofxout/Downpour.ofx.bundle/Contents/Win64/Downpour.ofx"
+          fi
+          ls -R ofxout
           ls -R out
 
       - name: Archive (zip)
@@ -95,6 +108,12 @@ jobs:
             7z a "../downpour-${{ matrix.name }}.zip" ./*
           else
             zip -r "../downpour-${{ matrix.name }}.zip" ./*
+          fi
+          cd ../ofxout
+          if command -v 7z >/dev/null 2>&1; then
+            7z a "../downpour-ofx-${{ matrix.name }}.zip" ./*
+          else
+            zip -r "../downpour-ofx-${{ matrix.name }}.zip" ./*
           fi
 
       - name: Disk image (macOS)
