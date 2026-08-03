@@ -1,0 +1,11 @@
+{
+  "name": "downpour",
+  "version-string": "0.1.0",
+  "description": "Dependencies for building the Downpour FFGL plugins. GLEW is only needed on Windows; macOS uses the system OpenGL framework. stb_truetype is vendored under external/stb and needs nothing here.",
+  "dependencies": [
+    {
+      "name": "glew",
+      "platform": "!osx"
+    }
+  ]
+}
