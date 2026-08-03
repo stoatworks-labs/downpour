@@ -20,8 +20,6 @@ Arena and Avenue, as a pair of FFGL plugins.
 <sub>The default: mirrored half-width katakana, green on black, sixty columns.
 Rendered by `dptest`, the offline harness.</sub>
 
-<!-- downloads:start -->
-
 ## Try it in your browser
 
 **<https://downpour-demo.stoatworks-labs.com>**
@@ -38,6 +36,8 @@ GLSL ES 3.00 is not desktop GL 4.1 core, and nothing on that page measures
 anything. The page says all of that itself, in a disclosure at the foot. The
 numbers worth trusting are in [Status](#status) and come from the offline
 harness in this repository.
+
+<!-- downloads:start -->
 
 ## Download
 
