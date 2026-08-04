@@ -48,9 +48,9 @@ harness in this repository.
 
 | Build | Download | Size |
 | --- | --- | --- |
-| Universal (Apple Silicon + Intel) · .dmg disk image | [`downpour-0.2.0-macos-universal.dmg`](https://github.com/stoatworks-labs/downpour/releases/download/v0.2.0/downpour-0.2.0-macos-universal.dmg) | 929 KB |
-| Universal (Apple Silicon + Intel) · .zip archive | [`downpour-macos-universal.zip`](https://github.com/stoatworks-labs/downpour/releases/latest/download/downpour-macos-universal.zip) | 559 KB |
-| Universal (Apple Silicon + Intel) · .zip archive (OpenFX — Resolve, Vegas, Nuke) | [`downpour-ofx-macos-universal.zip`](https://github.com/stoatworks-labs/downpour/releases/latest/download/downpour-ofx-macos-universal.zip) | 362 KB |
+| Universal (Apple Silicon + Intel) · .dmg disk image | [`downpour-0.2.0-macos-universal.dmg`](https://github.com/stoatworks-labs/downpour/releases/download/v0.2.0/downpour-0.2.0-macos-universal.dmg) | 962 KB |
+| Universal (Apple Silicon + Intel) · .zip archive | [`downpour-macos-universal.zip`](https://github.com/stoatworks-labs/downpour/releases/latest/download/downpour-macos-universal.zip) | 603 KB |
+| Universal (Apple Silicon + Intel) · .zip archive (OpenFX — Resolve, Vegas, Nuke) | [`downpour-ofx-macos-universal.zip`](https://github.com/stoatworks-labs/downpour/releases/latest/download/downpour-ofx-macos-universal.zip) | 378 KB |
 
 </details>
 
