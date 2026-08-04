@@ -214,6 +214,10 @@ cmake --install build     # into ~/Documents/Resolume Arena/Extra Effects
 list of traps — read it before changing the rain maths, the atlas or the font
 handling.
 
+<!-- attributions:start -->
+This project is built on other people's work — see [ATTRIBUTIONS.md](ATTRIBUTIONS.md).
+<!-- attributions:end -->
+
 ## Licence
 
 MIT — see [LICENSE](LICENSE).
