@@ -67,6 +67,8 @@ harness in this repository.
 
 All builds, checksums and release notes: [github.com/stoatworks-labs/downpour/releases](https://github.com/stoatworks-labs/downpour/releases).
 
+The Windows builds are unsigned, so SmartScreen warns once.
+
 <!-- downloads:end -->
 
 ## OpenFX — Resolve, Vegas, Nuke, Natron
