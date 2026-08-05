@@ -81,7 +81,14 @@ for bundle in "Downpour" "Downpour Over"; do
 	# by name. In a STATIC archive the linker may drop the whole translation
 	# unit, giving a bundle that loads, exports plugMain and reports that it
 	# contains no plugins.
-	if ! nm -gU "$binary" 2>/dev/null | grep -q '_plugMain'; then
+	# Captured, then matched from a herestring -- never `nm ... | grep -q`.
+	# Under `set -o pipefail` a `grep -q` that finds its match exits
+	# immediately, the writer upstream takes SIGPIPE, and the PIPELINE
+	# reports failure even though the symbol is there. It is output-size
+	# dependent, so it fires on the bigger binary first and looks
+	# intermittent. A herestring is not a pipeline, so nothing can SIGPIPE.
+	symbols=$( nm -gU "$binary" 2>/dev/null || true )
+	if ! grep -q '_plugMain' <<<"$symbols"; then
 		printf '\033[31m    FAILED: %s exports no plugMain\033[0m\n' "$bundle"
 		failures=$((failures + 1))
 	fi
