@@ -572,7 +572,8 @@ private:
 		setup.state.speed   = SpeedFromParam( float( speed->getValueAtTime( t ) ) );
 		setup.state.trail   = TrailFromParam( float( trail->getValueAtTime( t ) ) );
 		setup.state.density = float( density->getValueAtTime( t ) );
-		setup.state.mutate  = MutateFromParam( float( mutate->getValueAtTime( t ) ) );
+		// Scaled by Speed so churn calms with the rain — see kMutateReferenceSpeed.
+		setup.state.mutate  = MutateFromParam( float( mutate->getValueAtTime( t ) ) ) * setup.state.speed / kMutateReferenceSpeed;
 		setup.state.falloff = FalloffFromParam( float( falloff->getValueAtTime( t ) ) );
 		setup.state.seed    = SeedFromParam( float( seed->getValueAtTime( t ) ) );
 

@@ -159,7 +159,9 @@ what came before.
 ## Controls
 
 **Rain** — Speed, Direction (down, up, right, left), Columns, Trail, Density,
-Mutation, Fade, Seed.
+Mutation, Fade, Seed. Mutation scales with Speed, so winding Speed down calms
+the whole picture — glyph churn included — rather than leaving a shimmering
+wall behind slower heads.
 
 **Text** — Source, Characters, Custom Text, Text File, Mirror Glyphs.
 

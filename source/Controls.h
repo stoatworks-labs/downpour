@@ -97,10 +97,11 @@ enum ParamId : unsigned int
 /// a literal.
 constexpr int kAudioBins = 64;
 
-/// What Speed and Mutation are measured against. Free: per second, on the
-/// host's clock. Beat and Bar: per beat or per bar, locked to the host's BPM
-/// clock, with each interval's travel eased in hard at the front so the rain
-/// visibly kicks on the grid.
+/// What Speed is measured against. Free: per second, on the host's clock.
+/// Beat and Bar: per beat or per bar, locked to the host's BPM clock, with
+/// each interval's travel eased in hard at the front so the rain visibly
+/// kicks on the grid. Mutation rides the same clock scaled by Speed — see
+/// kMutateReferenceSpeed.
 enum class SyncMode : int
 {
 	Free = 0,
@@ -127,7 +128,19 @@ float TrailFromParam( float value );
 
 /// Glyph changes per second. 0..30, with a dead zone at the bottom so that
 /// "no mutation" is reachable by dragging to zero rather than by luck.
+///
+/// Calibrated at the default Speed: callers scale the returned rate by
+/// speed / kMutateReferenceSpeed, so churn slows and quickens with the rain
+/// itself. Winding Speed to the bottom used to leave every lit cell
+/// re-rolling ~4 times a second — 13x the pixel change of the crawling heads
+/// — so the rain read as a storm at any Speed (issue #1). At the default
+/// Speed the scale is 1 and the look is exactly v0.2.0's.
 float MutateFromParam( float value );
+
+/// The Speed at which MutateFromParam's per-second calibration holds:
+/// SpeedFromParam(0.52), the default. Divide the current speed by this to
+/// scale a mutation rate.
+constexpr float kMutateReferenceSpeed = 5.19f;
 
 /// Brightness exponent along the trail. 0.4..4, 1 at the centre of the slider.
 float FalloffFromParam( float value );

@@ -117,6 +117,11 @@ function rowsForAspect(columns, width, height) {
 const speedFromParam = (v) => exponential(v, 0.5, 45);
 const trailFromParam = (v) => linear(v, 0.04, 1);
 
+// The Speed at which mutateFromParam's per-second calibration holds:
+// speedFromParam(0.52), the default. Mutation is scaled by
+// speed / kMutateReferenceSpeed so churn calms with the rain (issue #1).
+const kMutateReferenceSpeed = 5.19;
+
 function mutateFromParam(v) {
   // Below a twentieth of the travel the answer is exactly zero. Without the
   // dead zone the bottom of an exponential range is 0.1 changes a second, which
@@ -708,7 +713,11 @@ function createRenderer(gl, quad) {
       shader.set('Speed', speedFromParam(params.get('speed')));
       shader.set('Trail', trailFromParam(params.get('trail')));
       shader.set('Density', params.get('density'));
-      shader.set('Mutate', mutateFromParam(params.get('mutate')));
+      shader.set(
+        'Mutate',
+        (mutateFromParam(params.get('mutate')) * speedFromParam(params.get('speed'))) /
+          kMutateReferenceSpeed,
+      );
       shader.set('Falloff', falloffFromParam(params.get('falloff')));
       shader.setInt('DirectionMode', Math.round(params.get('direction')));
       shader.setInt('FlowMode', flow);

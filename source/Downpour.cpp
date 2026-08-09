@@ -43,7 +43,7 @@ DownpourPlugin::DownpourPlugin( bool overInput_ ) :
 	// a generator nobody keeps. Every one of these is read back out through
 	// GetFloatParameter, so these assignments are what the host is told.
 	//---------------------------------------------------------------------
-	params[ PT_SPEED ]     = 0.52f;// ~8 rows/sec
+	params[ PT_SPEED ]     = 0.52f;// ~5.2 rows/sec — kMutateReferenceSpeed is this value
 	params[ PT_DIRECTION ] = static_cast< float >( Direction::Down );
 	params[ PT_COLUMNS ]   = 0.59f;// ~60 columns
 	params[ PT_TRAIL ]     = 0.43f;
@@ -561,7 +561,8 @@ RainState DownpourPlugin::CurrentState( int width, int height ) const
 	state.speed     = SpeedFromParam( params[ PT_SPEED ] );
 	state.trail     = TrailFromParam( params[ PT_TRAIL ] );
 	state.density   = params[ PT_DENSITY ];
-	state.mutate    = MutateFromParam( params[ PT_MUTATE ] );
+	// Scaled by Speed so churn calms with the rain — see kMutateReferenceSpeed.
+	state.mutate    = MutateFromParam( params[ PT_MUTATE ] ) * state.speed / kMutateReferenceSpeed;
 	state.falloff   = FalloffFromParam( params[ PT_FALLOFF ] );
 	state.seed      = SeedFromParam( params[ PT_SEED ] );
 	state.direction = static_cast< Direction >( OptionFromParam( params[ PT_DIRECTION ], static_cast< int >( Direction::Count ) ) );
