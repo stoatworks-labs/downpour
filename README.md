@@ -41,14 +41,14 @@ harness in this repository.
 
 ## Download
 
-**[v1.0.0](https://github.com/stoatworks-labs/downpour/releases/tag/v1.0.0)** — prebuilt for macOS and Windows. Pick your platform:
+**[v1.0.1](https://github.com/stoatworks-labs/downpour/releases/tag/v1.0.1)** — prebuilt for macOS and Windows. Pick your platform:
 
 <details>
 <summary><b>macOS</b> — Universal (Apple Silicon + Intel)</summary>
 
 | Build | Download | Size |
 | --- | --- | --- |
-| Universal (Apple Silicon + Intel) · .dmg disk image | [`downpour-1.0.0-macos-universal.dmg`](https://github.com/stoatworks-labs/downpour/releases/download/v1.0.0/downpour-1.0.0-macos-universal.dmg) | 977 KB |
+| Universal (Apple Silicon + Intel) · .dmg disk image | [`downpour-1.0.1-macos-universal.dmg`](https://github.com/stoatworks-labs/downpour/releases/download/v1.0.1/downpour-1.0.1-macos-universal.dmg) | 977 KB |
 | Universal (Apple Silicon + Intel) · .zip archive | [`downpour-macos-universal.zip`](https://github.com/stoatworks-labs/downpour/releases/latest/download/downpour-macos-universal.zip) | 612 KB |
 | Universal (Apple Silicon + Intel) · .zip archive (OpenFX — Resolve, Vegas, Nuke) | [`downpour-ofx-macos-universal.zip`](https://github.com/stoatworks-labs/downpour/releases/latest/download/downpour-ofx-macos-universal.zip) | 383 KB |
 
@@ -59,7 +59,7 @@ harness in this repository.
 
 | Build | Download | Size |
 | --- | --- | --- |
-| x64 · .exe installer | [`downpour-1.0.0-windows-x86_64-setup.exe`](https://github.com/stoatworks-labs/downpour/releases/download/v1.0.0/downpour-1.0.0-windows-x86_64-setup.exe) | 274 KB |
+| x64 · .exe installer | [`downpour-1.0.1-windows-x86_64-setup.exe`](https://github.com/stoatworks-labs/downpour/releases/download/v1.0.1/downpour-1.0.1-windows-x86_64-setup.exe) | 274 KB |
 | x64 · .zip archive | [`downpour-windows-x86_64.zip`](https://github.com/stoatworks-labs/downpour/releases/latest/download/downpour-windows-x86_64.zip) | 348 KB |
 | x64 · .zip archive (OpenFX — Resolve, Vegas, Nuke) | [`downpour-ofx-windows-x86_64.zip`](https://github.com/stoatworks-labs/downpour/releases/latest/download/downpour-ofx-windows-x86_64.zip) | 129 KB |
 
