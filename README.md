@@ -88,8 +88,8 @@ Windows  C:\Program Files\Common Files\OFX\Plugins\
 
 Both plugins are in every download — drop them into
 `~/Documents/Resolume Arena/Extra Effects` (or the Avenue equivalent) and restart
-Resolume. **The macOS build is not notarised**, so the first launch needs a
-right-click → Open, or a trip through System Settings → Privacy & Security.
+Resolume. The macOS builds are Developer ID-signed and notarised, so they load
+with no Gatekeeper step.
 
 ## Two plugins
 
