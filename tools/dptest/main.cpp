@@ -307,6 +307,7 @@ bool render( DownpourPlugin& plugin, const Target& target, double time, GLuint i
 	viewport.width  = static_cast< FFUInt32 >( target.width );
 	viewport.height = static_cast< FFUInt32 >( target.height );
 
+	plugin.SetClockScaleForTest( 1.0 );//seconds, said out loud rather than inferred
 	plugin.SetTime( time );
 
 	// A synthetic transport to go with the synthetic clock: 120 BPM in 4/4

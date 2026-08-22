@@ -1,5 +1,7 @@
 #include "Downpour.h"
 
+#include <string>
+#include <chrono>
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -22,7 +24,26 @@ int OptionFromParam( float value, int count )
 	const int index = static_cast< int >( std::lround( value ) );
 	return std::max( 0, std::min( count - 1, index ) );
 }
+
+/// Frames that must agree before the host's clock unit is settled.
+constexpr int kClockVotes = 4;
+
+/// Wall clock, to calibrate the host's against. Steady rather than system, so
+/// nothing here moves if the machine's clock is corrected.
+double wallSeconds()
+{
+	using namespace std::chrono;
+	static const steady_clock::time_point start = steady_clock::now();
+	return duration_cast< duration< double > >( steady_clock::now() - start ).count();
+}
 } // namespace
+
+// The buttons are declared one per link, so the run in the enum and the run the
+// block actually has must agree. They diverge the day somebody writes a user
+// guide, and this is what says so.
+static_assert( PT_COUNT - PT_ABOUT_TEXT == stoatworks::about::kParamCount,
+               "the About run no longer matches StoatworksAbout.h -- "
+               "add or remove a PT_ABOUT_BUTTON_n to match" );
 
 DownpourPlugin::DownpourPlugin( bool overInput_ ) :
 	overInput( overInput_ )
@@ -206,6 +227,18 @@ DownpourPlugin::DownpourPlugin( bool overInput_ ) :
 	SetParamGroup( PT_SYNC, "Tempo" );
 	SetParamGroup( PT_AUDIO, "Audio" );
 	SetParamGroup( PT_AUDIO_LEVEL, "Audio" );
+	// The About block. Declared inline rather than through a helper, because
+	// SetParamInfo is protected on CFFGLPlugin and nothing outside the class
+	// can call it.
+	SetParamInfo( PT_ABOUT_TEXT, "About", FF_TYPE_TEXT, stoatworks::about::defaultText() );
+	{
+		FFUInt32 aboutId = PT_ABOUT_TEXT + 1;
+		for( const auto& b : stoatworks::about::buttons() )
+			SetParamInfo( aboutId++, b.label, FF_TYPE_EVENT, false );
+	}
+	for( unsigned int id = PT_ABOUT_TEXT; id < PT_COUNT; ++id )
+		SetParamGroup( id, "About" );
+
 }
 
 //---------------------------------------------------------------------------
@@ -215,6 +248,12 @@ FFResult DownpourPlugin::SetFloatParameter( unsigned int index, float value )
 {
 	if( index >= PT_COUNT )
 		return FF_FAIL;
+
+	// The About buttons open a browser and store nothing, so they are handled
+	// before any of the bookkeeping below: pressing one is not the operator
+	// editing a control.
+	if( index >= PT_ABOUT_TEXT )
+		return stoatworks::about::handleParam( index - PT_ABOUT_TEXT, value ) ? FF_SUCCESS : FF_FAIL;
 
 	if( index == PT_PRESET )
 	{
@@ -292,6 +331,13 @@ float DownpourPlugin::GetFloatParameter( unsigned int index )
 
 FFResult DownpourPlugin::SetTextParameter( unsigned int index, const char* value )
 {
+	// Display-only, and it MUST still succeed: instantiateGL pushes every
+	// declared default back through the setters on a fresh instance and deletes
+	// the instance if one fails, so failing here means no real host can load
+	// the plugin -- while every offline harness here carries on passing.
+	if( index == PT_ABOUT_TEXT )
+		return FF_SUCCESS;
+
 	const std::string incoming = value != nullptr ? value : "";
 
 	std::lock_guard< std::mutex > lock( textMutex );
@@ -319,6 +365,16 @@ FFResult DownpourPlugin::SetTextParameter( unsigned int index, const char* value
 
 char* DownpourPlugin::GetTextParameter( unsigned int index )
 {
+	if( index == PT_ABOUT_TEXT )
+	{
+		// Function-local rather than a member: the line is built from
+		// compile-time facts, so it is the same for every instance, and the
+		// host only needs the pointer to outlive the call. Answered before the
+		// lock below -- it shares no state with the text parameters.
+		static const std::string aboutLine = stoatworks::about::textParam( 0 );
+		return const_cast< char* >( aboutLine.c_str() );
+	}
+
 	std::lock_guard< std::mutex > lock( textMutex );
 
 	const std::string* source = nullptr;
@@ -504,17 +560,93 @@ double RainClock( double seconds, float bpm, float barPhase, SyncMode mode )
 
 void DownpourPlugin::UpdateClock()
 {
-	const double raw = hostTime;
-	if( clockScale == 0.0 && lastRawTime >= 0.0 && raw > lastRawTime )
+	// FFGL never says what unit SetTime arrives in, and hosts disagree:
+	// Resolume sends MILLISECONDS (measured live at 20.0 per frame at its
+	// 50 fps, and the SDK's own Particles sample divides by 1000), while the
+	// offline harness sends seconds. Reading it raw is a thousand times fast
+	// on the one host that matters and exactly right on the one that gets
+	// tested, which is how it stays hidden.
+	//
+	// This used to guess the unit from the magnitude of a single frame delta
+	// and then lock. That had three holes: a delta between 0.5 and 2.0 decided
+	// nothing, a burst of sub-0.5 ms frames at load -- a thumbnail render on a
+	// quick GPU -- locked it to "seconds" for the rest of the session, and
+	// while undecided it assumed seconds, which is precisely the millisecond
+	// host's wrong answer.
+	//
+	// So measure instead of guessing. steady_clock says how much real time
+	// passed, the host says how much host time passed, and the ratio names the
+	// unit outright. Nothing plausible sits between 1 and 1000, so both bands
+	// are wide and a frame fitting neither simply does not vote.
+	const double wallNow = wallSeconds();
+	if( wallStart < 0.0 )
+		wallStart = wallNow;
+
+	// Never read `hostTime` before the host has set it: CFFGLPlugin's
+	// constructor initialises bpm and barPhase and leaves hostTime
+	// uninitialised, so until SetTime lands it is whatever was in that memory.
+	const double raw = hostTimeSeen ? hostTime : -1.0;
+
+	if( clockScale == 0.0 && raw >= 0.0 && lastRawTime >= 0.0 && lastWallTime >= 0.0 )
 	{
-		const double d = raw - lastRawTime;
-		if( d >= 0.001 && d <= 0.5 )
-			clockScale = 1.0;
-		else if( d >= 2.0 && d <= 500.0 )
-			clockScale = 0.001;
+		const double hostDelta = raw - lastRawTime;
+		const double wallDelta = wallNow - lastWallTime;
+
+		// A paused host, a looping clip or a stalled frame tells us nothing.
+		if( hostDelta > 0.0 && wallDelta >= 0.0005 )
+		{
+			const double ratio = hostDelta / wallDelta;
+			if( ratio > 0.1 && ratio < 10.0 )
+				++secondsVotes;
+			else if( ratio > 100.0 && ratio < 10000.0 )
+				++millisVotes;
+
+			// Several frames rather than one, so a single odd frame -- the
+			// first after a seek, say -- cannot decide it on its own.
+			if( secondsVotes >= kClockVotes || millisVotes >= kClockVotes )
+			{
+				clockScale = millisVotes > secondsVotes ? 0.001 : 1.0;
+				diag::info( std::string( "host clock is " )
+				            + ( clockScale == 0.001 ? "milliseconds" : "seconds" )
+				            + ", scale=" + std::to_string( clockScale ) );
+			}
+		}
 	}
-	lastRawTime = raw;
-	hostSeconds = raw * ( clockScale == 0.0 ? 1.0 : clockScale );
+
+	if( raw >= 0.0 )
+		lastRawTime = raw;
+	lastWallTime = wallNow;
+
+	// Until the unit is settled -- and for a host that never calls SetTime at
+	// all -- run on the real clock. Wrong in origin but right in rate, where
+	// assuming seconds would be a thousand times fast on Resolume.
+	hostSeconds = ( raw >= 0.0 && clockScale != 0.0 ) ? raw * clockScale : wallNow - wallStart;
+}
+
+FFResult DownpourPlugin::SetTime( double time )
+{
+	hostTimeSeen = true;
+	return CFFGLPlugin::SetTime( time );
+}
+
+void DownpourPlugin::SetClockScaleForTest( double scale )
+{
+	clockScale = scale;
+}
+
+void DownpourPlugin::TickClockForTest()
+{
+	UpdateClock();
+}
+
+double DownpourPlugin::ClockScaleForTest() const
+{
+	return clockScale;
+}
+
+double DownpourPlugin::HostSecondsForTest() const
+{
+	return hostSeconds;
 }
 
 void DownpourPlugin::UpdateAudio()

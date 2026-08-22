@@ -2,6 +2,9 @@
 
 #include <FFGLSDK.h>
 
+// After FFGLSDK.h, which is where FFUInt32 comes from.
+#include "StoatworksAboutParams.h"
+
 #include <array>
 #include <mutex>
 #include <string>
@@ -193,7 +196,28 @@ private:
 	//---------------------------------------------------------------------
 	void UpdateClock();
 
+public:
+	FFResult SetTime( double time ) override;
+
+	//---------------------------------------------------------------------
+	// Clock test hooks. The offline harness DECLARES its unit rather than
+	// leaving UpdateClock to infer one -- a single absolute time handed over
+	// in one frame is genuinely ambiguous, and an implicit unit is what let
+	// the millisecond bug through in the first place.
+	//---------------------------------------------------------------------
+	void SetClockScaleForTest( double scale );
+	void TickClockForTest();
+	double ClockScaleForTest() const;
+	double HostSecondsForTest() const;
+
+private:
+
 	double clockScale  = 0.0;///< 0 until decided; then 1.0 or 0.001
+	double lastWallTime = -1.0;
+	double wallStart    = -1.0;
+	int secondsVotes    = 0;
+	int millisVotes     = 0;
+	bool hostTimeSeen   = false;
 	double lastRawTime = -1.0;
 	double hostSeconds = 0.0;
 
