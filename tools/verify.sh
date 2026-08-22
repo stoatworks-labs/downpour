@@ -43,6 +43,9 @@ step "generated files are in sync"
 check python3 tools/embed_texts.py --check
 check python3 tools/extract_texts.py --check
 
+step "presets: every factory preset survives every host behaviour"
+check "$BUILD/dptest" --presets
+
 step "the built-in face and the atlas"
 check "$BUILD/dptest" --font
 

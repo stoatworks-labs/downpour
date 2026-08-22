@@ -126,6 +126,13 @@ def parameters(dptest):
         if len(parts) < 3 or not parts[0].isdigit():
             continue
         found.append((parts[1].strip(), parts[2].strip()))
+
+    # The About block is a text field and browser buttons, declared last. They
+    # never touch a pixel, so sweeping them only buries a real dead control.
+    for i, entry in enumerate(found):
+        if entry[0] == "About":
+            return found[:i]
+
     return found
 
 
