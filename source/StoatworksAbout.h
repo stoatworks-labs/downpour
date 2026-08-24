@@ -20,7 +20,7 @@ namespace stoatworks::about
     inline constexpr auto guide = "";
     inline constexpr auto page = "https://stoatworks-labs.com/software/downpour/";
     inline constexpr auto repo = "https://github.com/stoatworks-labs/downpour";
-    inline constexpr auto versionFallback = "v1.0.2";
+    inline constexpr auto versionFallback = "v1.0.3";
 
     inline constexpr auto org = "Stoatworks Labs";
     inline constexpr auto home = "https://stoatworks-labs.com";
