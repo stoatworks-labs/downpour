@@ -77,7 +77,34 @@ enum class Flow : int
 /// the host's 0..1 parameters into this; nothing in here is a slider position.
 struct RainState
 {
-	float time    = 0.0f;///< host clock, seconds
+	//-----------------------------------------------------------------------
+	// How far things have got, rather than how long the host has been running.
+	//
+	// These used to be `time * speed` and `time * mutate`, computed here from a
+	// `time` field. That made a Speed change move the rain by `time * delta`,
+	// and `time` is however long the composition has been open -- an hour in, a
+	// small nudge is worth hundreds of cycles and every column teleports. Same
+	// for Mutate and the glyph churn. It is the defect orrery issue #6 reported
+	// for its Speed control, and Mutate is dragged along with it because it is
+	// scaled by Speed.
+	//
+	// So the caller hands over the position reached instead of the clock, and
+	// owns whatever anchoring that needs. The FFGL build carries the position
+	// forward across a control change; the OpenFX build passes the plain
+	// product, because that host renders arbitrary times in arbitrary order.
+	// Neither choice is visible from in here, which is the point.
+	//
+	// There is deliberately no `time` field: nothing in Rain.cpp has any use for
+	// an absolute clock any more, and leaving one would invite exactly the
+	// expression this replaces.
+	//-----------------------------------------------------------------------
+
+	/// Rows travelled, before per-column variation. Was `time * speed`.
+	float travel = 0.0f;
+
+	/// Glyph changes elapsed. Was `time * mutate`.
+	float mutateTicks = 0.0f;
+
 	int columns   = 60;
 	int rows      = 34;
 	float speed   = 8.0f; ///< rows per second, before per-column variation

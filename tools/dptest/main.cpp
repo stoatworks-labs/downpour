@@ -633,7 +633,7 @@ int rainCheck()
 		// would be wrong is a flat tolerance loose enough to cover the worst
 		// case, because it would also cover a genuine divergence in every short
 		// case. So it scales with the thing that causes it.
-		const float travelScale = state.time * state.speed;
+		const float travelScale = state.travel;
 		const float tolerance   = 2e-4f + travelScale * 1.5e-7f;
 
 		for( int row = 0; row < state.rows; ++row )
@@ -687,7 +687,7 @@ int rainCheck()
 						HashCombine( state.seed, static_cast< uint32_t >( column ) ),
 						static_cast< uint32_t >( row ) * 0x9E3779B9u + 0x165667B1u );
 					const float phase = Unit( HashCombine( cellSeed, 0xD3A2646Cu ) );
-					const float exact = state.time * state.mutate + phase;
+					const float exact = state.mutateTicks + phase;
 					const float frac  = exact - std::floor( exact );
 					onMutationBoundary = frac < 1e-3f || frac > 1.0f - 1e-3f;
 				}
@@ -1334,6 +1334,114 @@ int runPresetTest()
 	return failures == 0 ? 0 : 1;
 }
 
+//---------------------------------------------------------------------------
+/// Prove a Speed or Mutate change does not move the rain.
+///
+/// The travel either side of the change is read directly rather than comparing
+/// rendered frames: the rain is a field of columns on a repeating cycle, so a
+/// travel a whole number of cycles away renders identically and two frames
+/// would match for entirely the wrong reason. The numbers say it outright.
+///
+/// Needs no GL, so it runs ahead of the context.
+//---------------------------------------------------------------------------
+int runSpeedTest()
+{
+	int failures = 0;
+
+	auto check = [ &failures ]( const char* what, double got, double want, double tol ) {
+		const bool ok = std::fabs( got - want ) <= tol;
+		std::printf( "speed %-42s got=%-14.4f want=%-14.4f %s\n", what, got, want, ok ? "ok" : "FAILED" );
+		if( !ok )
+			++failures;
+	};
+
+	DownpourPlugin plugin( false );
+	plugin.SetClockScaleForTest( 1.0 );//seconds, said out loud rather than inferred
+
+	// An hour in, which is where the old arithmetic hurt most and where a live
+	// operator actually is when they reach for the slider.
+	double host = 3600.0;
+	plugin.SetTime( host );
+	plugin.TickClockForTest();
+
+	// Untouched, the anchors must leave the old expressions exactly as they
+	// were -- this is what keeps tools/sweep.py and every rendered-frame
+	// comparison measuring the same thing they measured before. The plugin's
+	// own defaults are asked for rather than written down here: a test that
+	// hard-codes them goes quietly wrong the day a default moves.
+	{
+		const float speed  = SpeedFromParam( plugin.GetFloatParameter( PT_SPEED ) );
+		const float mutate = MutateFromParam( plugin.GetFloatParameter( PT_MUTATE ) ) * speed
+		                     / kMutateReferenceSpeed;
+		check( "travel untouched == clock * speed", plugin.TravelForTest(), host * speed, 1e-2 );
+		check( "ticks untouched == clock * mutate", plugin.MutateTicksForTest(), host * mutate, 1e-2 );
+	}
+
+	// Speed, then Mutate on its own: Mutate is scaled by Speed, so moving Speed
+	// moves the churn too, and anchoring only travel would leave the rain still
+	// while every glyph convulsed. Both paths need covering.
+	struct Step
+	{
+		const char* name;
+		unsigned int param;
+		float slider;
+	};
+	const Step steps[] = {
+		{ "Speed -> 0.10 (slower)", PT_SPEED, 0.10f },
+		{ "Speed -> 0.95 (much faster)", PT_SPEED, 0.95f },
+		{ "Speed -> 0.00 (stopped)", PT_SPEED, 0.00f },
+		{ "Mutate -> 0.90 (churning)", PT_MUTATE, 0.90f },
+		{ "Mutate -> 0.00 (still glyphs)", PT_MUTATE, 0.00f },
+		{ "Speed -> 0.70 (running again)", PT_SPEED, 0.70f },
+	};
+
+	for( const Step& step : steps )
+	{
+		const float travelBefore = plugin.TravelForTest();
+		const float ticksBefore  = plugin.MutateTicksForTest();
+
+		// The same instant, a new setting: nothing about the clock has moved,
+		// so nothing about the picture may either.
+		plugin.SetFloatParameter( step.param, step.slider );
+		plugin.TickClockForTest();
+
+		check( step.name, plugin.TravelForTest(), travelBefore, 1e-2 );
+		check( "  and the glyphs do not re-roll", plugin.MutateTicksForTest(), ticksBefore, 1e-2 );
+
+		// And then it must actually run at the new rate.
+		const float travelResumed = plugin.TravelForTest();
+		const float speed         = SpeedFromParam( plugin.GetFloatParameter( PT_SPEED ) );
+		host += 1.0;
+		plugin.SetTime( host );
+		plugin.TickClockForTest();
+		check( "  one second later", plugin.TravelForTest() - travelResumed, speed, 1e-2 );
+	}
+
+	// Bar sync is deliberately NOT anchored: its contract is that a cycle lands
+	// on the bar line, so it must still be the plain transport product. If the
+	// anchor ever leaks into it, beat sync stops meaning anything.
+	{
+		DownpourPlugin bar( false );
+		bar.SetClockScaleForTest( 1.0 );
+		bar.SetFloatParameter( PT_SYNC, static_cast< float >( SyncMode::Bar ) );
+		bar.SetBeatInfo( 120.0f, 0.25f );//120bpm: a bar is two seconds
+		bar.SetTime( 8.0 );
+		bar.TickClockForTest();
+		const float before = bar.TravelForTest();
+
+		bar.SetFloatParameter( PT_SPEED, 0.95f );
+		bar.TickClockForTest();
+
+		const bool jumped = std::fabs( bar.TravelForTest() - before ) > 1e-2;
+		std::printf( "speed %-42s %s\n", "Bar sync still re-locks", jumped ? "ok" : "FAILED" );
+		if( !jumped )
+			++failures;
+	}
+
+	std::printf( "%s\n", failures == 0 ? "speed: all ok" : "speed: FAILURES" );
+	return failures == 0 ? 0 : 1;
+}
+
 int main( int argc, char** argv )
 {
 	std::string outPath;
@@ -1372,6 +1480,10 @@ int main( int argc, char** argv )
 		else if( arg == "--height" ) height = std::atoi( value( "--height" ).c_str() );
 		else if( arg == "--presets" )
 			return runPresetTest();
+		// Ahead of the GL context: this one needs no GPU, so it still runs on a
+		// machine that cannot make a context at all.
+		else if( arg == "--speed" )
+			return runSpeedTest();
 		else if( arg == "--list" )   doList = true;
 		else if( arg == "--font" )   doFont = true;
 		else if( arg == "--rain" )   doRain = true;
@@ -1395,6 +1507,7 @@ int main( int argc, char** argv )
 	{
 		std::fprintf( stderr,
 		              "usage: dptest [--out PATH] [--atlas PATH] [--list] [--font] [--rain]\n"
+		              "              [--speed] [--presets]\n"
 		              "              [--readback] [--effect] [--time T] [--width W] [--height H]\n"
 		              "              [--set Name=value]...\n"
 		              "       dptest --sequence DIR --script CUES [--seconds S] [--fps F]\n"

@@ -113,7 +113,7 @@ float HeadPosition( const RainState& state, int column, float& cycle, int& drop 
 	// have gone by. `drop` is what gives a column a fresh place in the document
 	// every time it restarts, so it has to be derived here rather than guessed
 	// at from the head.
-	const float travel = state.time * state.speed * speedScale + phase * cycle;
+	const float travel = state.travel * speedScale + phase * cycle;
 
 	drop = static_cast< int >( std::floor( travel / cycle ) );
 	return FloorMod( travel, cycle );
@@ -220,7 +220,7 @@ Cell Evaluate( const RainState& state, int x, int y )//= mirrored
 		if( state.mutate > 0.0f )
 		{
 			const float mutatePhase = Unit( HashCombine( cellSeed, kSaltMutate ) );
-			const int tick = static_cast< int >( std::floor( state.time * state.mutate + mutatePhase ) );
+			const int tick = static_cast< int >( std::floor( state.mutateTicks + mutatePhase ) );
 			cellSeed = HashCombine( cellSeed, static_cast< uint32_t >( tick ) );
 		}
 		else

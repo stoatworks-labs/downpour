@@ -573,7 +573,7 @@ private:
 
 		setup.over = over;
 
-		setup.state.time    = float( t / fps );
+		const float seconds = float( t / fps );
 		setup.state.columns = ColumnsFromParam( float( columns->getValueAtTime( t ) ) );
 		setup.state.rows    = RowsForAspect( setup.state.columns, outW, outH );
 		setup.state.speed   = SpeedFromParam( float( speed->getValueAtTime( t ) ) );
@@ -581,6 +581,16 @@ private:
 		setup.state.density = float( density->getValueAtTime( t ) );
 		// Scaled by Speed so churn calms with the rain — see kMutateReferenceSpeed.
 		setup.state.mutate  = MutateFromParam( float( mutate->getValueAtTime( t ) ) ) * setup.state.speed / kMutateReferenceSpeed;
+
+		// The plain products, deliberately. The FFGL build anchors these so that
+		// nudging Speed or Mutate live does not teleport the rain, and that anchor
+		// is a running carry which needs frames to arrive in order. This host
+		// renders arbitrary times in arbitrary order and can keyframe both
+		// controls, so a carry here would make a frame depend on which frames
+		// happened to be rendered before it. A pure function of time is the right
+		// answer for a timeline; see Downpour.h.
+		setup.state.travel      = seconds * setup.state.speed;
+		setup.state.mutateTicks = seconds * setup.state.mutate;
 		setup.state.falloff = FalloffFromParam( float( falloff->getValueAtTime( t ) ) );
 		setup.state.seed    = SeedFromParam( float( seed->getValueAtTime( t ) ) );
 

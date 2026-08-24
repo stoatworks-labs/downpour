@@ -225,9 +225,9 @@ private:
 	// The FFGL header never says what unit SetTime is in, and hosts disagree:
 	// Resolume hands over MILLISECONDS (measured live: 20.0 per frame at its
 	// 50 fps, and the SDK's own Particles sample divides by 1000), while the
-	// offline harness sends seconds. UpdateClock decides from the first
-	// plausible frame delta and sticks: 0.001..0.5 is a seconds-host frame,
-	// 2..500 is a milliseconds-host frame, anything else keeps waiting.
+	// offline harness sends seconds. UpdateClock calibrates the host's clock
+	// against a steady_clock and lets the ratio name the unit, over several
+	// agreeing frames, failing safe to the wall clock while undecided.
 	// `hostSeconds` is the normalised clock everything downstream reads.
 	//---------------------------------------------------------------------
 	void UpdateClock();
@@ -246,6 +246,15 @@ public:
 	double ClockScaleForTest() const;
 	double HostSecondsForTest() const;
 
+	/// How far the rain has fallen, and how many glyph changes have gone by, at
+	/// this moment. `--speed` needs them: the thing being tested is that a Speed
+	/// change does NOT move the rain, and reading the position either side of
+	/// one says so directly. Comparing rendered frames could not: the rain is a
+	/// field of columns on a cycle, so a travel a whole number of cycles away
+	/// renders identically and would match for entirely the wrong reason.
+	float TravelForTest() const;
+	float MutateTicksForTest() const;
+
 private:
 
 	double clockScale  = 0.0;///< 0 until decided; then 1.0 or 0.001
@@ -256,6 +265,55 @@ private:
 	bool hostTimeSeen   = false;
 	double lastRawTime = -1.0;
 	double hostSeconds = 0.0;
+
+	//---------------------------------------------------------------------
+	// Where the rain has got to.
+	//
+	// The picture stays a pure function of the RainState -- that is the whole
+	// design and none of it changes here. What changes is only which travel a
+	// given clock reading maps to.
+	//
+	// Travel was `time * speed`, so a Speed change moved the rain by
+	// `time * delta`, and `time` is however long the composition has been open.
+	// An hour in, a small nudge is worth hundreds of cycles: every column
+	// teleports and every drop lands somewhere unrelated. That is what orrery
+	// issue #6 reported for its Speed control, once the 1000x clock bug was out
+	// of the way.
+	//
+	// Mutate needs its own anchor rather than sharing one, for two reasons: it
+	// has its own control, and it is SCALED by Speed (see
+	// kMutateReferenceSpeed), so a Speed change moves the glyph churn as well.
+	// Anchoring travel alone would leave every cell re-rolling its glyph the
+	// instant Speed was touched -- the rain would hold still and the characters
+	// would convulse.
+	//
+	// Free only. Beat and Bar are recovered from the transport each frame and
+	// deliberately re-lock, because landing a cycle on the bar line is the whole
+	// point of them; the anchors follow the clock while they are selected so
+	// that returning to Free resumes rather than leaps. Nor is any of this in
+	// the OpenFX build, which renders arbitrary times in arbitrary order and can
+	// keyframe Speed: a running carry there would make a frame depend on which
+	// frames were rendered before it.
+	//---------------------------------------------------------------------
+	void UpdateRainAnchor();
+
+	/// The clock the rain runs on: seconds in Free, a curved bar count otherwise.
+	double RainSeconds() const;
+
+	/// Whether the anchors apply -- Free only.
+	bool RainIsFree() const;
+
+	/// The one copy of each expression. CurrentState fills the RainState from
+	/// them and the test hooks read them, so a test cannot end up measuring
+	/// different arithmetic from the plugin.
+	float TravelAt( float speed ) const;
+	float MutateTicksAt( float mutate ) const;
+
+	float travelAnchor  = 0.0f;///< rows travelled by `anchorClock`
+	float mutateAnchor  = 0.0f;///< glyph changes elapsed by `anchorClock`
+	float anchorClock   = 0.0f;///< the clock reading both belong to
+	float anchorSpeed   = -1.0f;///< speed in force since then; < 0 until the first frame
+	float anchorMutate  = -1.0f;///< and the mutate rate
 
 	//---------------------------------------------------------------------
 	// Audio.

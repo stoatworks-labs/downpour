@@ -44,6 +44,10 @@ check python3 tools/embed_texts.py --check
 check python3 tools/extract_texts.py --check
 
 step "presets: every factory preset survives every host behaviour"
+# Needs no GPU, so it goes first: a machine that cannot make a GL context
+# can still run it.
+check "$BUILD/dptest" --speed
+
 check "$BUILD/dptest" --presets
 
 step "the built-in face and the atlas"

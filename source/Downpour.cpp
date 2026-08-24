@@ -724,6 +724,96 @@ void DownpourPlugin::SetClockScaleForTest( double scale )
 void DownpourPlugin::TickClockForTest()
 {
 	UpdateClock();
+	UpdateRainAnchor();
+}
+
+//---------------------------------------------------------------------------
+/// The clock the rain runs on: seconds in Free, a curved bar count otherwise.
+double DownpourPlugin::RainSeconds() const
+{
+	const SyncMode sync = static_cast< SyncMode >( OptionFromParam( params[ PT_SYNC ], static_cast< int >( SyncMode::Count ) ) );
+	return RainClock( hostSeconds, bpm, barPhase, sync );
+}
+
+/// Whether the anchors apply. Beat and Bar are recovered from the transport
+/// each frame and must keep re-locking; only Free is a free-running clock that
+/// a control change would otherwise rescale.
+bool DownpourPlugin::RainIsFree() const
+{
+	const SyncMode sync = static_cast< SyncMode >( OptionFromParam( params[ PT_SYNC ], static_cast< int >( SyncMode::Count ) ) );
+	return sync == SyncMode::Free;
+}
+
+float DownpourPlugin::TravelAt( float speed ) const
+{
+	const float clock = static_cast< float >( RainSeconds() );
+	return RainIsFree() ? travelAnchor + ( clock - anchorClock ) * speed
+	                    : clock * speed;
+}
+
+float DownpourPlugin::MutateTicksAt( float mutate ) const
+{
+	const float clock = static_cast< float >( RainSeconds() );
+	return RainIsFree() ? mutateAnchor + ( clock - anchorClock ) * mutate
+	                    : clock * mutate;
+}
+
+//---------------------------------------------------------------------------
+void DownpourPlugin::UpdateRainAnchor()
+{
+	const float clock  = static_cast< float >( RainSeconds() );
+	const float speed  = SpeedFromParam( params[ PT_SPEED ] );
+	const float mutate = MutateFromParam( params[ PT_MUTATE ] ) * speed / kMutateReferenceSpeed;
+
+	// Beat and Bar are meant to jump -- they re-lock to the transport, which is
+	// the point of them. Keep the anchor following the clock while they are
+	// selected so that returning to Free resumes rather than leaps.
+	if( !RainIsFree() )
+	{
+		anchorClock  = clock;
+		anchorSpeed  = speed;
+		anchorMutate = mutate;
+		return;
+	}
+
+	// First frame: leave the anchors at clock zero at zero. That makes the
+	// expressions above identical to the old `clock * speed` and
+	// `clock * mutate` for as long as nobody touches either control, which is
+	// what keeps every rendered-frame test and tools/sweep.py measuring the same
+	// thing they measured before.
+	if( anchorSpeed < 0.0f )
+	{
+		anchorSpeed  = speed;
+		anchorMutate = mutate;
+		return;
+	}
+
+	if( speed != anchorSpeed || mutate != anchorMutate )
+	{
+		// Both carry together, off the one clock reading. They have to: Mutate
+		// is scaled by Speed, so a Speed change moves both, and carrying them at
+		// different instants would leave the churn out of step with the rain.
+		//
+		// Once per change rather than once per frame, so a long session cannot
+		// accumulate rounding into a drift, and the frame rate still cannot move
+		// a drop.
+		travelAnchor += ( clock - anchorClock ) * anchorSpeed;
+		mutateAnchor += ( clock - anchorClock ) * anchorMutate;
+		anchorClock  = clock;
+		anchorSpeed  = speed;
+		anchorMutate = mutate;
+	}
+}
+
+float DownpourPlugin::TravelForTest() const
+{
+	return TravelAt( SpeedFromParam( params[ PT_SPEED ] ) );
+}
+
+float DownpourPlugin::MutateTicksForTest() const
+{
+	const float speed = SpeedFromParam( params[ PT_SPEED ] );
+	return MutateTicksAt( MutateFromParam( params[ PT_MUTATE ] ) * speed / kMutateReferenceSpeed );
 }
 
 double DownpourPlugin::ClockScaleForTest() const
@@ -772,7 +862,6 @@ RainState DownpourPlugin::CurrentState( int width, int height ) const
 	const SyncMode sync = static_cast< SyncMode >( OptionFromParam( params[ PT_SYNC ], static_cast< int >( SyncMode::Count ) ) );
 
 	RainState state;
-	state.time      = static_cast< float >( RainClock( hostSeconds, bpm, barPhase, sync ) );
 	state.audioLevel = params[ PT_AUDIO_LEVEL ];
 	state.audio      = audioLevel;
 	state.columns   = ColumnsFromParam( params[ PT_COLUMNS ] );
@@ -782,6 +871,12 @@ RainState DownpourPlugin::CurrentState( int width, int height ) const
 	state.density   = params[ PT_DENSITY ];
 	// Scaled by Speed so churn calms with the rain — see kMutateReferenceSpeed.
 	state.mutate    = MutateFromParam( params[ PT_MUTATE ] ) * state.speed / kMutateReferenceSpeed;
+
+	// Positions rather than clock products: see UpdateRainAnchor. Until the
+	// operator has moved Speed or Mutate these are exactly `clock * speed` and
+	// `clock * mutate`, because both anchors start at clock zero at zero.
+	state.travel      = TravelAt( state.speed );
+	state.mutateTicks = MutateTicksAt( state.mutate );
 	state.falloff   = FalloffFromParam( params[ PT_FALLOFF ] );
 	state.seed      = SeedFromParam( params[ PT_SEED ] );
 	state.direction = static_cast< Direction >( OptionFromParam( params[ PT_DIRECTION ], static_cast< int >( Direction::Count ) ) );
@@ -900,6 +995,7 @@ void DownpourPlugin::Render( int width, int height, GLuint inputTexture, float m
 	}
 
 	UpdateClock();
+	UpdateRainAnchor();
 	UpdateAudio();
 
 	const RainState state = CurrentState( width, height );
@@ -914,9 +1010,9 @@ void DownpourPlugin::Render( int width, int height, GLuint inputTexture, float m
 	shader.Set( "AtlasTexture", 0 );
 	shader.Set( "StreamTexture", 1 );
 
-	shader.Set( "Time", state.time );
+	shader.Set( "Travel", state.travel );
+	shader.Set( "MutateTicks", state.mutateTicks );
 	shader.Set( "Grid", static_cast< float >( state.columns ), static_cast< float >( state.rows ) );
-	shader.Set( "Speed", state.speed );
 	shader.Set( "Trail", state.trail );
 	shader.Set( "Density", state.density );
 	shader.Set( "Mutate", state.mutate );

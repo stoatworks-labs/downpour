@@ -312,9 +312,14 @@ out vec4 fragColor;
 //---------------------------------------------------------------------------
 // The grid and the clock.
 //---------------------------------------------------------------------------
-uniform float Time;          //host clock, seconds
+//How far things have got, rather than how long the host has been running: the
+//host side hands over the position reached and owns the anchoring that needs.
+//NOT Time * Speed -- an absolute product moves the whole picture the instant
+//Speed is touched. See Rain.h, which these mirror. (No backticks in here: this
+//shader lives in a JS template literal, and one would end it.)
+uniform float Travel;        //rows travelled, before per-column variation
+uniform float MutateTicks;   //glyph changes elapsed
 uniform vec2  Grid;          //columns, rows
-uniform float Speed;         //rows per second, before per-column variation
 uniform float Trail;         //trail length as a fraction of the run
 uniform float Density;       //fraction of columns carrying a drop
 uniform float Mutate;        //glyph changes per second
@@ -432,7 +437,7 @@ CellResult EvaluateCell( ivec2 cellIndex )         //= mirrored
 	float phase      = Unit( HashCombine( columnSeed, kSaltPhase ) );
 
 	float cycle  = run * ( 1.0 + kTailGap );                         //= mirrored
-	float travel = Time * Speed * speedScale + phase * cycle;        //= mirrored
+	float travel = Travel * speedScale + phase * cycle;              //= mirrored
 	float drop   = floor( travel / cycle );                          //= mirrored
 	float head   = travel - cycle * drop;                            //= mirrored
 
@@ -470,7 +475,7 @@ CellResult EvaluateCell( ivec2 cellIndex )         //= mirrored
 		if( Mutate > 0.0 )
 		{
 			float mutatePhase = Unit( HashCombine( cellSeed, kSaltMutate ) );
-			int tick = int( floor( Time * Mutate + mutatePhase ) );
+			int tick = int( floor( MutateTicks + mutatePhase ) );
 			cellSeed = HashCombine( cellSeed, uint( tick ) );
 		}
 		else
@@ -691,6 +696,43 @@ function createRenderer(gl, quad) {
     gl.bindTexture(gl.TEXTURE_2D, null);
   }
 
+  // Where the rain has got to, mirroring Downpour.h's anchors.
+  //
+  // `Time * Speed` moves the rain by `time * delta` the instant Speed changes,
+  // and here `time` is how long the page has been open -- so dragging the
+  // slider a few minutes in teleports every column. The demo is the one place
+  // where a visitor is guaranteed to be dragging a Speed slider, so it needs
+  // this at least as much as the plugin does.
+  //
+  // Mutate gets its own anchor because it is scaled by Speed: anchoring travel
+  // alone would hold the rain still and make every glyph convulse instead.
+  let travelAnchor = 0;
+  let mutateAnchor = 0;
+  let anchorClock = 0;
+  let anchorSpeed = -1;
+  let anchorMutate = -1;
+
+  function rainPositions(time, speed, mutate) {
+    if (anchorSpeed < 0) {
+      // First frame: anchors stay at clock zero at zero, so this is exactly
+      // `time * speed` until a control is touched.
+      anchorSpeed = speed;
+      anchorMutate = mutate;
+    } else if (speed !== anchorSpeed || mutate !== anchorMutate) {
+      // Both carry together off the one clock reading, once per change.
+      travelAnchor += (time - anchorClock) * anchorSpeed;
+      mutateAnchor += (time - anchorClock) * anchorMutate;
+      anchorClock = time;
+      anchorSpeed = speed;
+      anchorMutate = mutate;
+    }
+
+    return {
+      travel: travelAnchor + (time - anchorClock) * speed,
+      mutateTicks: mutateAnchor + (time - anchorClock) * mutate,
+    };
+  }
+
   return {
     render({ input, params, width, height, time, variant }) {
       const source = Math.round(params.get('source'));
@@ -708,16 +750,17 @@ function createRenderer(gl, quad) {
       shader.setSampler('AtlasTexture', 0);
       shader.setSampler('StreamTexture', 1);
 
-      shader.set('Time', time);
+      const speed = speedFromParam(params.get('speed'));
+      const mutate =
+        (mutateFromParam(params.get('mutate')) * speed) / kMutateReferenceSpeed;
+      const positions = rainPositions(time, speed, mutate);
+
+      shader.set('Travel', positions.travel);
+      shader.set('MutateTicks', positions.mutateTicks);
       shader.set('Grid', columns, rows);
-      shader.set('Speed', speedFromParam(params.get('speed')));
       shader.set('Trail', trailFromParam(params.get('trail')));
       shader.set('Density', params.get('density'));
-      shader.set(
-        'Mutate',
-        (mutateFromParam(params.get('mutate')) * speedFromParam(params.get('speed'))) /
-          kMutateReferenceSpeed,
-      );
+      shader.set('Mutate', mutate);
       shader.set('Falloff', falloffFromParam(params.get('falloff')));
       shader.setInt('DirectionMode', Math.round(params.get('direction')));
       shader.setInt('FlowMode', flow);
