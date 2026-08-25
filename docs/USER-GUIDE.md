@@ -35,8 +35,9 @@ installer trips SmartScreen, once.
 
 ### OpenFX hosts
 
-Copy `Downpour.ofx.bundle` from the `-ofx-` download into `/Library/OFX/Plugins` (macOS) or
-`C:\Program Files\Common Files\OFX\Plugins` (Windows). **Both plugins are in the one bundle.** It
+Copy `Downpour.ofx.bundle` from the `-ofx-` download into `/Library/OFX/Plugins` (macOS),
+`C:\Program Files\Common Files\OFX\Plugins` (Windows) or `/usr/OFX/Plugins`
+(Linux). **Both plugins are in the one bundle.** It
 is the identical rain — the OpenFX build calls the same code the shader is measured against.
 
 There is no Audio group there; OFX hosts have no audio analysis.
