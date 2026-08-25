@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
 project(Downpour
-    VERSION 1.0.3
+    VERSION 1.0.4
     LANGUAGES CXX
 )
 
@@ -236,6 +236,15 @@ if(BUILD_OFX)
         PLUGIN_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
         PLUGIN_VERSION_MINOR=${PROJECT_VERSION_MINOR}
     )
+
+    # Threads, explicitly. The OFX Support library's multi-thread suite calls
+    # pthread_create, and on Rocky 8 -- glibc 2.28, the floor Resolve supports
+    # -- that still lives in libpthread; libpthread was only folded into libc in
+    # glibc 2.34. Leave it out and the plugin compiles, links, passes a symbol
+    # check and a glibc-version check, and then fails at dlopen with "undefined
+    # symbol: pthread_create". macOS and Windows never show it.
+    find_package(Threads REQUIRED)
+    target_link_libraries(DownpourOFX PRIVATE Threads::Threads)
 
     set(OFX_BUNDLE_DIR "${CMAKE_BINARY_DIR}/Downpour.ofx.bundle")
     set_target_properties(DownpourOFX PROPERTIES
