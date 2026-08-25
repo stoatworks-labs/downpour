@@ -946,7 +946,7 @@ void describeParams( OFX::ImageEffectDescriptor& desc, bool over )
 		->setParent( *colour );
 	defineColour( desc, page, kParamBackColour, "Background", "Behind the rain.", 0.0, 0.0, 0.0 )
 		->setParent( *colour );
-	defineSlider( desc, page, kParamBackOpacity, "Background Opacity",
+	defineSlider( desc, page, kParamBackOpacity, "Background Alpha",
 				  over ? "How much the background veils the footage." : "0 rains on transparency.", over ? 0.0 : 1.0 )
 		->setParent( *colour );
 	defineSlider( desc, page, kParamGlow, "Glow", "A lift on the trail's own brightness, 0 to 2.", 0.0 )

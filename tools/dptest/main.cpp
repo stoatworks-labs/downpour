@@ -269,7 +269,7 @@ bool applySetting( DownpourPlugin& plugin, const std::string& assignment )
 // Driving the plugin.
 //---------------------------------------------------------------------------
 /// A test picture for the effect variant to draw over: coloured quadrants with a
-/// gradient, so that Mix, Background Opacity and the premultiplied compositing
+/// gradient, so that Mix, Background Alpha and the premultiplied compositing
 /// all have something to be visibly wrong against.
 GLuint makeInputTexture( int width, int height )
 {

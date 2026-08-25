@@ -97,7 +97,7 @@ enum ParamId : unsigned int
 	//
 	// How many buttons there are is decided by which URLs StoatworksAbout.h
 	// actually holds, so Downpour.cpp static_asserts this run against
-	// `about::kParamCount` -- writing a user guide later adds one, and without
+	// `about::kParamCount` -- the user guide added the fourth button, and without
 	// the assert that would silently shift PT_COUNT and leave the last button
 	// undeclared.
 	//
@@ -106,6 +106,7 @@ enum ParamId : unsigned int
 	PT_ABOUT_BUTTON_1,
 	PT_ABOUT_BUTTON_2,
 	PT_ABOUT_BUTTON_3,
+	PT_ABOUT_BUTTON_4,
 	PT_COUNT
 };
 

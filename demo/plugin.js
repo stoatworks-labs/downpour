@@ -607,7 +607,7 @@ void main()
 
 #ifdef DOWNPOUR_OVER_INPUT
 	//The clip sits under our own background, which sits under the rain. So
-	//Background Opacity is how much the plugin veils the footage, and the two
+	//Background Alpha is how much the plugin veils the footage, and the two
 	//controls keep the meanings they have in the source plugin.
 	vec2 picture = clamp( uv, vec2( 0.0 ), vec2( 1.0 ) );
 	vec4 clip = texture( InputTexture, picture * MaxUV );
@@ -897,7 +897,7 @@ mountDemo({
     { id: 'backR', name: 'Background', type: 'colour', default: 0.0, group: 'Colour' },
     { id: 'backG', name: 'Background_Green', type: 'colour', default: 0.04, group: 'Colour' },
     { id: 'backB', name: 'Background_Blue', type: 'colour', default: 0.01, group: 'Colour' },
-    { id: 'backOpacity', name: 'Background Opacity', type: 'standard', default: 1.0, group: 'Colour', display: pct },
+    { id: 'backOpacity', name: 'Background Alpha', type: 'standard', default: 1.0, group: 'Colour', display: pct },
     {
       id: 'glow', name: 'Glow', type: 'standard', default: 0.25, group: 'Colour',
       display: (v) => `${glowFromParam(v).toFixed(2)}×`,

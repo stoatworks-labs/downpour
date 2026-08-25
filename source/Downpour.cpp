@@ -175,7 +175,7 @@ DownpourPlugin::DownpourPlugin( bool overInput_ ) :
 	SetParamInfof( PT_BACK_R, "Background", FF_TYPE_RED );
 	SetParamInfof( PT_BACK_G, "Background_Green", FF_TYPE_GREEN );
 	SetParamInfof( PT_BACK_B, "Background_Blue", FF_TYPE_BLUE );
-	SetParamInfof( PT_BACK_OPACITY, "Background Opacity", FF_TYPE_STANDARD );
+	SetParamInfof( PT_BACK_OPACITY, "Background Alpha", FF_TYPE_STANDARD );
 
 	SetParamInfof( PT_GLOW, "Glow", FF_TYPE_STANDARD );
 	SetParamInfof( PT_MIX, "Mix", FF_TYPE_STANDARD );

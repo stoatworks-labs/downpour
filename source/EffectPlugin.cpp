@@ -10,7 +10,7 @@
 
     The compositing order is deliberate and is shared with the source: the clip
     is at the bottom, the plugin's own background veils it, and the rain falls
-    on top. So Background Opacity keeps exactly the meaning it has in the source
+    on top. So Background Alpha keeps exactly the meaning it has in the source
     plugin -- how much of the plugin's own backdrop you see -- rather than
     becoming a second, differently-behaved control on this side.
 

@@ -356,7 +356,7 @@ void main()
 
 #ifdef DOWNPOUR_OVER_INPUT
 	//The clip sits under our own background, which sits under the rain. So
-	//Background Opacity is how much the plugin veils the footage, and the two
+	//Background Alpha is how much the plugin veils the footage, and the two
 	//controls keep the meanings they have in the source plugin.
 	vec2 picture = clamp( uv, vec2( 0.0 ), vec2( 1.0 ) );
 	vec4 clip = texture( InputTexture, picture * MaxUV );
