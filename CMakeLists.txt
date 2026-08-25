@@ -53,6 +53,14 @@ endif()
 
 option(DOWNPOUR_BUILD_TOOLS "Build the offline render and measurement harness" ON)
 
+# The FFGL plugin, the FFGL SDK submodule and GLEW are one dependency group,
+# and the OpenFX plugin belongs to none of it. Turning this OFF builds the OFX
+# plugin alone, with no GL loader anywhere in the configure -- which is what
+# the Linux job does, because the FFGL SDK has no Linux path, and GLEW would
+# otherwise have to be installed to build something that never calls it.
+option(DOWNPOUR_BUILD_FFGL "Build the FFGL plugin (needs the FFGL SDK and, off macOS, GLEW)" ON)
+
+if(DOWNPOUR_BUILD_FFGL)
 # ---------------------------------------------------------------------------
 # The Resolume FFGL SDK, as a git submodule under external/.
 # ---------------------------------------------------------------------------
@@ -64,6 +72,8 @@ endif()
 set(FFGL_BUILD_EXAMPLE_PLUGINS OFF CACHE BOOL "" FORCE)
 add_subdirectory(external/ffgl EXCLUDE_FROM_ALL)
 
+endif()  # DOWNPOUR_BUILD_FFGL
+
 # ---------------------------------------------------------------------------
 # stb_truetype, vendored as a single public-domain header under external/stb.
 # Its one translation unit is source/Typeface.cpp, which defines
@@ -72,6 +82,7 @@ add_subdirectory(external/ffgl EXCLUDE_FROM_ALL)
 add_library(stb_truetype INTERFACE)
 target_include_directories(stb_truetype INTERFACE external/stb)
 
+if(DOWNPOUR_BUILD_FFGL)
 # ---------------------------------------------------------------------------
 # Everything both plugins share, as an OBJECT library.
 #
@@ -183,6 +194,8 @@ elseif(APPLE)
         CACHE PATH "" FORCE)
 endif()
 
+endif()  # DOWNPOUR_BUILD_FFGL
+
 # ---------------------------------------------------------------------------
 # The OpenFX builds — both plugins in one bundle — for Resolve/Nuke/Natron/
 # Vegas. CPU render against the vendored OFX SDK subset under external/openfx
@@ -251,7 +264,9 @@ if(BUILD_OFX)
     endif()
 endif()
 
+if(DOWNPOUR_BUILD_FFGL)
 install(TARGETS DownpourSource DownpourEffect
     LIBRARY DESTINATION "."
     BUNDLE  DESTINATION "."
 )
+endif()  # DOWNPOUR_BUILD_FFGL
