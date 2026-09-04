@@ -38,7 +38,7 @@ static CFFGLPluginInfo PluginInfo(
 	0,                                                // Plugin major version number
 	1,                                                // Plugin minor version number
 	FF_EFFECT,                                        // Plugin type
-	"Digital rain over the clip",                     // Plugin description
+	"Digital rain over the clip: falling columns of characters.\n\nUse the built-in face or point it at any TTF or OTF on the machine. There is a built-in one on purpose - a composition saved on one rig carries a font path, and the next rig is in a different country. When the path does not resolve the picture still arrives.\n\nStart from a Preset, at the bottom.",// Plugin description
 	"Downpour FFGL effect"                            // About
 );
 
