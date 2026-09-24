@@ -805,6 +805,10 @@ const pct = (v) => `${Math.round(v * 100)}%`;
 
 mountDemo({
   name: 'Downpour',
+  // The FFGL types this repo registers (EffectPlugin.cpp and SourcePlugin.cpp),
+  // for the kit banner's closing sentence, which said "effect" alone until
+  // 2026-09-24.
+  kind: ['effect', 'source'],
   pluginId: 'DP01 · DP02',
   tagline:
     'Digital rain: columns of characters falling at their own speeds, each with a bright leading glyph and a trail fading out behind it. Every cell is a closed-form function of its column, its row and the clock — no simulation state, so the rain cannot slow down when the host’s frame rate does.',
