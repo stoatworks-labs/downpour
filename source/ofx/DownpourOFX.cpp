@@ -49,7 +49,9 @@ constexpr const char* kPluginDescription =
 	"own, and the picture is identical at every resolution. Sources range "
 	"from the classic katakana junk to whole documents that play out in "
 	"order.\n\n"
-	"Fusion reports no frame rate; there, time-based controls assume 24 fps.\n\n"
+	"Resolve's Fusion page reports the frame rate on the effect but not on its "
+	"clips; the plugin reads the effect's, and assumes 24 fps only where a host "
+	"reports none.\n\n"
 	"https://stoatworks-labs.com";
 
 constexpr const char* kParamSpeed       = "speed";
@@ -390,17 +392,17 @@ private:
 	}
 };
 
-/// The frame rate when the host reports none: 24, Resolve's default timeline
-/// rate. Resolve's Fusion page reports no frame rate anywhere.
+/// The frame rate when the host reports none anywhere: 24, Resolve's default
+/// timeline rate.
 constexpr double kFallbackFrameRate = 24.0;
 
 /// OFX time is in frames. This is the first positive, finite frame rate the
 /// host gives -- the output clip's, the source clip's, the effect's -- else
 /// kFallbackFrameRate. Each read is its own try: Resolve's Fusion page gives
-/// kOfxImageEffectPropFrameRate on neither the effect nor any clip, the
-/// Support library throws on a property the host lacks, and a throw out of
-/// render fails the render -- in Fusion, a composition that "could not be
-/// processed successfully".
+/// kOfxImageEffectPropFrameRate on the effect but on no clip, the Support
+/// library throws on a property the host lacks, and a throw out of render
+/// fails the render -- in Fusion, a composition that "could not be processed
+/// successfully". There the effect's rate, the timeline's, is the one used.
 double framesPerSecond( const OFX::ImageEffect& effect, const OFX::Clip* output, const OFX::Clip* source )
 {
 	const auto usable = []( double rate ) { return std::isfinite( rate ) && rate > 0.0; };
@@ -624,7 +626,7 @@ private:
 
 		//OFX time is in frames; the rain wants seconds. The clip's frame rate
 		//makes the conversion, and a fallback of 24 keeps a host that reports
-		//none -- Resolve's Fusion page -- animating rather than failing.
+		//none anywhere animating rather than failing. See framesPerSecond.
 		const double fps = framesPerSecond( *this, dstClip, srcClip );
 
 		setup.over = over;
