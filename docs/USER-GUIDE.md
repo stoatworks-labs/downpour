@@ -20,6 +20,10 @@ OpenFX plugin for Resolve, Vegas, Nuke and Natron.
 > FFGL parameter and clock plumbing is the part no harness here reaches. Try it on a spare layer
 > before you put it in a show.
 >
+> Released at **v1.0.9**, whose OpenFX build renders on DaVinci Resolve's Fusion page, with the
+> rain falling at the composition's frame rate; v1.0.8's failed every frame there. Only the
+> Fusion page has been tried — not Resolve's Edit or Color page, Vegas, Nuke or Natron.
+>
 > This codebase was created with AI assistance, directed and reviewed by a human author.
 
 ---

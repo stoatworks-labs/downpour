@@ -206,7 +206,11 @@ what reads as digital rain rather than as a screensaver.
 
 ## Status
 
-Verified offline, never in a host. `tools/verify.sh` runs:
+Verified offline. The Resolume build has never been loaded into Resolume. The
+OpenFX build of v1.0.9 renders as a Fusion tool in DaVinci Resolve Studio 21.1
+on macOS, and its generator's rain moves there; v1.0.8's failed every frame on
+that page. No other page of Resolve, and no other OpenFX host, has been tried.
+`tools/verify.sh` runs:
 
 | Check | What it proves |
 | --- | --- |

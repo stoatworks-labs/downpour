@@ -25,8 +25,9 @@ handling.
   (generator) and `com.stoatworks.downpourover` (filter) — for Resolve/Nuke/Natron/Vegas.
 - Rain/stream/atlas/typeface code linked straight from source; only the fragment
   shader's per-pixel machinery (glyph fit, atlas sampling, composite) is mirrored.
-- OFX time arrives in *frames*; the plugin divides by the clip frame rate to get
-  the seconds Rain.cpp wants.
+- OFX time arrives in *frames*; the plugin divides by the host's frame rate to get
+  the seconds Rain.cpp wants: the clips' rate, else the effect's (all Resolve's
+  Fusion page reports), else 24 — `framesPerSecond()`, every read guarded.
 - Smoke test (ofxprobe only drives the Filter context, so the generator's
   describe is checked but its render runs only in a real host):
   `../resolume-ofx-bridge/build/ofxprobe --dir build --render com.stoatworks.downpourover --size 640x360 --out /tmp/d.bmp`
