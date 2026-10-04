@@ -86,6 +86,13 @@ The same effect also builds as an OpenFX plugin, so it runs in DaVinci Resolve
 (Edit and Color pages, and Fusion), Vegas Pro, Nuke and Natron. It is
 the identical rain — the OpenFX build calls the same Rain.cpp the shader is measured against, and one bundle carries both plugins: the generator and Downpour Over.
 
+**Fusion reports no frame rate; there, time-based controls assume 24 fps.**
+Resolve's Fusion page gives an OpenFX plugin no frame rate at all, and the first
+OpenFX builds failed every render there. Now Downpour falls back to 24, Resolve's
+default timeline rate, so in Fusion the rain falls and mutates as if the composition
+were 24 fps whatever its real rate. A host that reports a rate, Resolve's Edit page
+included, gets its own.
+
 Grab the `downpour-ofx-*` zip for your platform from the release and copy
 `Downpour.ofx.bundle` (both plugins are in the one bundle) into the standard OpenFX folder, then restart the host:
 
