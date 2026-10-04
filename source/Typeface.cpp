@@ -347,11 +347,26 @@ const std::vector< FontFile >& InstalledFonts()
 		for( const std::string& directory : FontDirectories() )
 			ScanDirectory( directory, found, 0 );
 
-		std::sort( found.begin(), found.end(), []( const FontFile& a, const FontFile& b ) {
+		// Within a family, the plain face first, because the de-duplication
+		// below keeps whichever file sorts first: the first face of a
+		// collection, then the shortest file name. By path alone "Georgia Bold
+		// Italic.ttf" sorts ahead of "Georgia.ttf" -- a space is lower than a
+		// full stop -- and choosing Georgia drew bold italic.
+		auto fileName = []( const std::string& path ) {
+			const size_t slash = path.find_last_of( "/\\" );
+			return slash == std::string::npos ? path : path.substr( slash + 1 );
+		};
+		std::sort( found.begin(), found.end(), [ & ]( const FontFile& a, const FontFile& b ) {
 			const std::string left  = Lowered( a.family );
 			const std::string right = Lowered( b.family );
 			if( left != right )
 				return left < right;
+			if( a.collectionIndex != b.collectionIndex )
+				return a.collectionIndex < b.collectionIndex;
+			const size_t leftName  = fileName( a.path ).size();
+			const size_t rightName = fileName( b.path ).size();
+			if( leftName != rightName )
+				return leftName < rightName;
 			return a.path < b.path;
 		} );
 

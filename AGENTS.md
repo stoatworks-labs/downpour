@@ -142,6 +142,16 @@ name ID 16 over 1, English language records over others, and reject a decode tha
 is more than a quarter `?`. Also skip families beginning with `.` — macOS has
 about a hundred internal faces that are UI machinery rather than typefaces.
 
+**A family is one file, and which one is decided by the sort.** `InstalledFonts()`
+sorts and then `std::unique`s by family, so the first file of each family wins.
+Sorted by path alone, `Georgia Bold Italic.ttf` comes before `Georgia.ttf` — a
+space is lower than a full stop — and choosing Georgia, from the dropdown or by
+name, drew bold italic. Many macOS families are shaped like that. Within a family
+the comparator now takes face 0 of a collection first, then the shortest file
+name, then the path. `--font` checks that Georgia resolves to `…/Georgia.ttf`,
+and skips with a message on a machine without Georgia. (The dice plugin copied
+this scan and found it first.)
+
 **MSVC rejects a string literal over 65535 bytes.** A hard error, and one that
 appears only on the Windows build — which is to say only after macOS has already
 gone green. `source/Corpus.cpp` is generated as **byte arrays**.

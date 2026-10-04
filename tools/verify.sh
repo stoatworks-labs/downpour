@@ -6,8 +6,8 @@
 #
 #   generated files   does source/Corpus.cpp still match texts/*.txt
 #   passages          are the four excerpts free of Gutenberg boilerplate
-#   --font            is the built-in face well formed, and where did the
-#                     glyphs come from
+#   --font            is the built-in face well formed, where did the glyphs
+#                     come from, and does a family load its regular face
 #   --rain            does the shader's arithmetic match Rain.cpp
 #   --readback        does a document survive decode, atlas, texture and shader
 #   sweep.py          does every control actually reach the picture

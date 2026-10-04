@@ -61,9 +61,11 @@ struct FontFile
 };
 
 /// Every font found in the OS font directories, sorted by family name and
-/// de-duplicated. Scanned once per process and cached -- a plugin instance is
-/// created every time an operator drops the effect on a layer, and walking a
-/// thousand files each time would be felt.
+/// de-duplicated to one file per family -- the regular face where the scan can
+/// tell (face 0 of a collection, then the shortest file name). Scanned once per
+/// process and cached -- a plugin instance is created every time an operator
+/// drops the effect on a layer, and walking a thousand files each time would be
+/// felt.
 const std::vector< FontFile >& InstalledFonts();
 
 /// Index of the first font whose family matches `family`, or -1. Case

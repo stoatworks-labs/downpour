@@ -13,7 +13,8 @@
         --atlas PATH      dump the glyph atlas as built
         --list            parameters, with their types and defaults
       --presets         every factory preset survives every host behaviour
-        --font            which codepoints came from where
+        --font            which codepoints came from where, and does a family
+                          resolve to its regular face
         --rain            the GPU's cells against Rain.cpp, exactly
         --readback        render a document and read the text back off the frame
 
@@ -449,6 +450,33 @@ int faceInvariants()
 	return bad == 0 ? 0 : 1;
 }
 
+/// Choosing a family must load its regular face.
+///
+/// The scan keeps one file per family, whichever sorts first, and by path alone
+/// "Georgia Bold Italic.ttf" sorts ahead of "Georgia.ttf" -- a space is lower
+/// than a full stop -- so the dropdown's Georgia drew bold italic. Georgia ships
+/// with macOS as four separate files, which makes it the family that shows it.
+int regularFaceCheck()
+{
+	const int index = FindFontByFamily( "Georgia" );
+	if( index < 0 )
+	{
+		std::printf( "  skip Georgia is not installed, so there is no family to check the regular face of\n" );
+		return 0;
+	}
+
+	const std::string& path = InstalledFonts()[ static_cast< size_t >( index ) ].path;
+	const std::string wanted = "/Georgia.ttf";
+	if( path.size() >= wanted.size() && path.compare( path.size() - wanted.size(), wanted.size(), wanted ) == 0 )
+	{
+		std::printf( "  ok   Georgia resolves to its regular face, %s\n", path.c_str() );
+		return 0;
+	}
+
+	std::printf( "  FAIL Georgia resolves to %s, expected a path ending in %s\n", path.c_str(), wanted.c_str() );
+	return 1;
+}
+
 int fontReport( DownpourPlugin& plugin )
 {
 	std::printf( "built-in face: %d glyphs on a %dx%d body\n", BuiltinCount(), kBitmapSize, kBitmapSize );
@@ -463,6 +491,7 @@ int fontReport( DownpourPlugin& plugin )
 	std::printf( "current source: %s\n", plugin.SourceNote().c_str() );
 
 	const int invariants = faceInvariants();
+	const int regular    = regularFaceCheck();
 
 	int drawn   = 0;
 	int missing = 0;
@@ -496,8 +525,9 @@ int fontReport( DownpourPlugin& plugin )
 
 	// A codepoint nothing can draw is not automatically a failure -- it is a
 	// failure only if it is silent, which is what this line exists to prevent.
-	// The face's own invariants are, though.
-	return invariants;
+	// The face's own invariants are, though, and so is a family that loads
+	// something other than its regular face.
+	return invariants | regular;
 }
 
 //---------------------------------------------------------------------------
