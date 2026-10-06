@@ -41,16 +41,16 @@ harness in this repository.
 
 ## Download
 
-**[v1.0.9](https://github.com/stoatworks-labs/downpour/releases/tag/v1.0.9)** — prebuilt for macOS, Windows and Linux. Pick your platform:
+**[v1.0.10](https://github.com/stoatworks-labs/downpour/releases/tag/v1.0.10)** — prebuilt for macOS, Windows and Linux. Pick your platform:
 
 <details>
 <summary><b>macOS</b> — Universal (Apple Silicon + Intel)</summary>
 
 | Build | Download | Size |
 | --- | --- | --- |
-| Universal (Apple Silicon + Intel) · .dmg disk image | [`downpour-1.0.9-macos-universal.dmg`](https://github.com/stoatworks-labs/downpour/releases/download/v1.0.9/downpour-1.0.9-macos-universal.dmg) | 706 KB |
-| Universal (Apple Silicon + Intel) · .zip archive | [`downpour-macos-universal.zip`](https://github.com/stoatworks-labs/downpour/releases/latest/download/downpour-macos-universal.zip) | 632 KB |
-| Universal (Apple Silicon + Intel) · .zip archive (OpenFX — Resolve, Vegas, Nuke) | [`downpour-ofx-macos-universal.zip`](https://github.com/stoatworks-labs/downpour/releases/latest/download/downpour-ofx-macos-universal.zip) | 390 KB |
+| Universal (Apple Silicon + Intel) · .dmg disk image | [`downpour-1.0.10-macos-universal.dmg`](https://github.com/stoatworks-labs/downpour/releases/download/v1.0.10/downpour-1.0.10-macos-universal.dmg) | 709 KB |
+| Universal (Apple Silicon + Intel) · .zip archive | [`downpour-macos-universal.zip`](https://github.com/stoatworks-labs/downpour/releases/latest/download/downpour-macos-universal.zip) | 634 KB |
+| Universal (Apple Silicon + Intel) · .zip archive (OpenFX — Resolve, Vegas, Nuke) | [`downpour-ofx-macos-universal.zip`](https://github.com/stoatworks-labs/downpour/releases/latest/download/downpour-ofx-macos-universal.zip) | 391 KB |
 
 </details>
 
@@ -59,8 +59,8 @@ harness in this repository.
 
 | Build | Download | Size |
 | --- | --- | --- |
-| x64 · .exe installer | [`downpour-1.0.9-windows-x86_64-setup.exe`](https://github.com/stoatworks-labs/downpour/releases/download/v1.0.9/downpour-1.0.9-windows-x86_64-setup.exe) | 287 KB |
-| x64 · .zip archive | [`downpour-windows-x86_64.zip`](https://github.com/stoatworks-labs/downpour/releases/latest/download/downpour-windows-x86_64.zip) | 362 KB |
+| x64 · .exe installer | [`downpour-1.0.10-windows-x86_64-setup.exe`](https://github.com/stoatworks-labs/downpour/releases/download/v1.0.10/downpour-1.0.10-windows-x86_64-setup.exe) | 288 KB |
+| x64 · .zip archive | [`downpour-windows-x86_64.zip`](https://github.com/stoatworks-labs/downpour/releases/latest/download/downpour-windows-x86_64.zip) | 364 KB |
 | x64 · .zip archive (OpenFX — Resolve, Vegas, Nuke) | [`downpour-ofx-windows-x86_64.zip`](https://github.com/stoatworks-labs/downpour/releases/latest/download/downpour-ofx-windows-x86_64.zip) | 134 KB |
 
 </details>
@@ -70,7 +70,7 @@ harness in this repository.
 
 | Build | Download | Size |
 | --- | --- | --- |
-| x64 · .zip archive (OpenFX — Resolve, Vegas, Nuke) | [`downpour-ofx-linux-x86_64.zip`](https://github.com/stoatworks-labs/downpour/releases/latest/download/downpour-ofx-linux-x86_64.zip) | 837 KB |
+| x64 · .zip archive (OpenFX — Resolve, Vegas, Nuke) | [`downpour-ofx-linux-x86_64.zip`](https://github.com/stoatworks-labs/downpour/releases/latest/download/downpour-ofx-linux-x86_64.zip) | 836 KB |
 
 </details>
 
