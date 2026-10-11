@@ -84,6 +84,10 @@ float GlyphScaleFromParam( float value )
 {
 	const float v = Saturate( value );
 	// Two straight segments meeting at 1.0 at three quarters of the travel.
+	// Above 1.0 a glyph overhangs its cell and the renderers ask the
+	// neighbouring cells for it, but only the nearest one on each axis -- which
+	// holds while the top of this range stays below 2, an overhang of under half
+	// a cell. See main() in Shaders.cpp.
 	if( v <= 0.75f )
 		return Linear( v / 0.75f, 0.25f, 1.0f );
 	return Linear( ( v - 0.75f ) / 0.25f, 1.0f, 1.6f );

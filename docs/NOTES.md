@@ -7,7 +7,7 @@ person and dated by when each thing was learned — that date is usually the use
 Cross-cutting notes that are not specific to this repo live in
 [fleet-notes](https://github.com/stoatworks-labs/fleet-notes).
 
-*downpour — digital rain (Matrix-style falling code) as TWO FFGL plugins for Resolume, a source and an effect; PUBLIC MIT v0.1.0 released, site + video live, verified offline only and never loaded into Resolume*
+*downpour — digital rain (Matrix-style falling code) as TWO FFGL plugins for Resolume, a source and an effect; PUBLIC MIT v0.1.0 released, site + video live, verified offline; loaded into Resolume only to reproduce downpour#3 (2026-10-11)*
 
 **downpour** (started 2026-08-03) — **digital rain** for Resolume Arena/Avenue:
 falling columns of characters. `~/Projects/downpour`, **MIT**.
@@ -17,7 +17,8 @@ falling columns of characters. `~/Projects/downpour`, **MIT**.
 Website page live at `stoatworks-labs.com/software/downpour/` and in the Resolume
 suite; video live at **youtube.com/watch?v=Sdvmpz_GiTo**, both embed links wired.
 **Still never loaded into Resolume** — verified entirely by its own offline
-harness, and the README and statusNote both say so.
+harness, and the README and statusNote both say so. (True until 2026-10-11: see
+downpour#3 below.)
 
 **The Windows build needs `NOMINMAX`.** `windows.h` defines `min`/`max` as macros,
 so `std::min` in `Typeface::BuildAtlas` became `std::(...)` and failed with
@@ -51,7 +52,9 @@ No simulation state, no feedback buffer. So it cannot drift with the host frame
 rate, is resolution independent for free, and **any frame can be rendered on its
 own** — which is what nearly every test depends on. It also collapses to **one
 pass**: asciify needs three because its cell pass *averages the input*, and
-downpour has no input to reduce.
+downpour has no input to reduce. Each pixel asks its own cell, and since
+downpour#3 also asks the nearer neighbours when a glyph above Glyph Size 0.75 can
+overhang it — still one pass, at most four cells.
 
 **Font handling is the part worth remembering.** Fonts are found by walking the
 OS font directories and reading each file's `name` table directly (one code path
@@ -88,6 +91,28 @@ demanding 100%; `--font` checks the drawn face's invariants; `tools/sweep.py`
 proves all 30 controls move the picture. **`--readback` is the one that earns its
 keep** — it caught glyphs rendering upside down, which `--rain` cannot see
 because it never looks at a glyph.
+
+**Glyph Size above 0.75 cropped every glyph to its cell: downpour#3, fixed
+2026-10-11, unreleased.** Reported as "Top of Glyphs clipped" and reproduced in
+Resolume Arena 7.27.1 on Windows with v1.0.10, the first time downpour had been
+loaded into Resolume at all. Glyph Size maps to a scale of 0.25 to 1.6 and reaches
+1.0, a glyph that exactly fills its cell, at 0.75. Every pixel asked only its own
+cell and `SampleGlyph` returns nothing outside the glyph body, so above 0.75 the
+glyph stopped at the cell edge. The built-in face sits high in its 12-row body,
+so the tops went: T read as |, E lost its top bar. In Arial Ö lost its dots, Å its
+ring and É its bottom bar. It had been that way since the first commit, and
+`--readback` could not see it because it renders at exactly 0.75. Allan chose
+letting glyphs overlap their neighbours over capping Glyph Size at 1.0. A pixel in
+the overhang band, at most 0.3 of a cell, also asks the nearer neighbour on each
+axis and the diagonal, and the brightest glyph wins. The OFX renderer and the demo
+do the same. The same change moved the atlas fetch to `textureGrad` (see
+AGENTS.md), which removed a faint line along every lit cell's edges. `dptest
+--overhang` fails on every glyph it measures against the old shader and passes
+with the fix. Cost on an M4 Max at 4K with Density and Trail full: 0.29 ms a
+frame before, 0.54 to 0.66 ms at Glyph Size 1.0 and about 0.32 ms at 0.75 after.
+**The fix has not been run in Resolume.** Accented letters drawing blank in the
+built-in face are by design: the face is ASCII and katakana only. The guide now
+says so.
 
 Traps live in the repo's AGENTS.md — see [agents md convention](https://github.com/stoatworks-labs/fleet-notes/blob/main/notes/reference_agents_md_convention.md) and
 [ffgl sdk bugs](https://github.com/stoatworks-labs/fleet-notes/blob/main/notes/reference_ffgl_sdk_bugs.md). Related: [resolume luma keyer](https://github.com/stoatworks-labs/resolume-luma-keyer/blob/main/docs/NOTES.md) (`resolume-luma-keyer`),

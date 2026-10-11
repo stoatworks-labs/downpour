@@ -505,7 +505,9 @@ int SlotForStream( int position )
 }
 
 ///Ink coverage at \`local\` (0..1 within the glyph body) for one atlas slot.
-float SampleGlyph( int slot, vec2 local )
+///\`dx\` and \`dy\` are how fast \`local\` moves per output pixel, worked out in
+///main() before anything branches.
+float SampleGlyph( int slot, vec2 local, vec2 dx, vec2 dy )
 {
 	if( any( lessThan( local, vec2( 0.0 ) ) ) || any( greaterThan( local, vec2( 1.0 ) ) ) )
 		return 0.0;
@@ -540,7 +542,17 @@ float SampleGlyph( int slot, vec2 local )
 	//texels is 2046 of the 2048, and dividing by 2046 puts every glyph a tenth
 	//of a percent off -- which is invisible in the middle of a stroke and shows
 	//up as a sliver of the next slot along the far edge.
-	return texture( AtlasTexture, texel / AtlasSize ).r;
+	//
+	//textureGrad, never texture. texture() takes its mip level from derivatives
+	//across a 2x2 pixel quad, and where a quad straddles a cell edge \`local\`
+	//jumps by a whole cell: the GPU picks the coarsest mip, and a faint line of
+	//averaged atlas runs along every edge of a lit cell. This is also called
+	//from inside a branch, where an implicit derivative is undefined. The
+	//fetch coordinate moves (glyphPx - 1) / AtlasSize per unit of \`local\` --
+	//\`body\` gives one texel up to the two half-texel insets -- and the flips
+	//above change only its sign, which the mip choice ignores.
+	vec2 toTexture = vec2( glyphPx - 1.0 ) / AtlasSize;
+	return textureGrad( AtlasTexture, texel / AtlasSize, dx * toTexture, dy * toTexture ).r;
 }
 
 void main()
@@ -567,40 +579,88 @@ void main()
 	//the cell's aspect is the difference between a font and a smeared font,
 	//and cells are rarely square.
 	//---------------------------------------------------------------------
-	float ink = 0.0;
-	if( cell.brightness > 0.0 )
+	//In **pixels**, not in frame units. A cell that is square on screen is
+	//not square in 0..1 coordinates on anything but a square output, so
+	//fitting the glyph in normalised space squashed every glyph by the
+	//frame's aspect ratio -- 16:9 output, glyphs 56% of their proper height.
+	vec2 cellPx = Resolution / Grid;
+	float shortSide = min( cellPx.x, cellPx.y );
+	vec2 span = vec2( shortSide ) / cellPx;        //square, as a fraction of the cell
+	span *= max( GlyphScale, 0.001 );
+
+	//How fast \`local\` moves per output pixel, for SampleGlyph's mip choice.
+	//Taken here, before anything branches, and from gridUV, which runs on
+	//smoothly across a cell edge where \`within\` jumps back by a whole cell.
+	vec2 localDx = dFdx( gridUV ) / span;
+	vec2 localDy = dFdy( gridUV ) / span;
+
+	//Above a GlyphScale of 1 -- the Glyph Size slider past 0.75 -- the glyph
+	//is bigger than its cell and overhangs it by ( span - 1 ) / 2 on each
+	//side, so a pixel near a cell edge may be inked by the next cell's glyph
+	//as well as its own, and has to ask that cell too. Asking only its own
+	//cell cropped every glyph to the cell, and since the built-in face sits
+	//high in its body it was the tops that went: T read as | (downpour#3).
+	//
+	//The overhang is at most 0.3 of a cell -- GlyphScale tops out at 1.6 in
+	//Controls.cpp -- so only the nearer neighbour on each axis can reach a
+	//pixel, plus the diagonal between them: four cells at most, and only in
+	//the band along the edges. At a GlyphScale of 1 or less there is no band
+	//and a pixel asks its own cell alone, as it always did.
+	vec2  overhang = max( 0.5 * ( span - vec2( 1.0 ) ), vec2( 0.0 ) );
+	ivec2 toward   = ivec2( within.x < 0.5 ? -1 : 1, within.y < 0.5 ? -1 : 1 );
+	bool  reachX   = within.x < overhang.x || within.x > 1.0 - overhang.x;
+	bool  reachY   = within.y < overhang.y || within.y > 1.0 - overhang.y;
+
+	//---------------------------------------------------------------------
+	//Composite. Where two glyphs overlap, the brighter one wins and brings
+	//its own cell's head colour: a pixel shows one glyph, never a sum that
+	//neither cell asked for.
+	//---------------------------------------------------------------------
+	float textAlpha = 0.0;
+	vec3  lit       = TextColour;
+
+	for( int ny = 0; ny < 2; ++ny )
 	{
-		//In **pixels**, not in frame units. A cell that is square on screen is
-		//not square in 0..1 coordinates on anything but a square output, so
-		//fitting the glyph in normalised space squashed every glyph by the
-		//frame's aspect ratio -- 16:9 output, glyphs 56% of their proper height.
-		vec2 cellPx = Resolution / Grid;
-		float shortSide = min( cellPx.x, cellPx.y );
-		vec2 span = vec2( shortSide ) / cellPx;        //square, as a fraction of the cell
-		span *= max( GlyphScale, 0.001 );
+		for( int nx = 0; nx < 2; ++nx )
+		{
+			if( ( nx == 1 && !reachX ) || ( ny == 1 && !reachY ) )
+				continue;
 
-		vec2 local = ( within - 0.5 * ( vec2( 1.0 ) - span ) ) / span;
+			ivec2 offset = ivec2( nx * toward.x, ny * toward.y );
+			ivec2 index  = cellIndex + offset;
+			if( index.x < 0 || index.y < 0 || index.x >= columns || index.y >= rows )
+				continue;
 
-		//The film's glyphs are mirrored. Doing it here rather than in the atlas
-		//keeps GlyphData.cpp readable against a real font, which is what makes
-		//a badly drawn glyph findable.
-		local.x = mix( local.x, 1.0 - local.x, MirrorGlyphs );
+			CellResult other = cell;
+			if( nx != 0 || ny != 0 )
+				other = EvaluateCell( index );
+			if( other.brightness <= 0.0 )
+				continue;
 
-		int slot = SlotForStream( cell.stream );
-		ink = SampleGlyph( slot, local );
+			//Where this pixel falls in that cell's glyph.
+			vec2 local = ( within - vec2( offset ) - 0.5 * ( vec2( 1.0 ) - span ) ) / span;
+
+			//The film's glyphs are mirrored. Doing it here rather than in the atlas
+			//keeps GlyphData.cpp readable against a real font, which is what makes
+			//a badly drawn glyph findable.
+			local.x = mix( local.x, 1.0 - local.x, MirrorGlyphs );
+
+			float ink = SampleGlyph( SlotForStream( other.stream ), local, localDx, localDy );
+
+			//Glow is a lift on the trail's own brightness rather than a blur: a blur
+			//would need a second pass and a buffer, and at rain speed what reads as
+			//glow is mostly the trail refusing to go fully dark.
+			float body  = other.brightness + Glow * other.brightness * ( 1.0 - other.brightness );
+			float alpha = clamp( ink * body * TextOpacity, 0.0, 1.0 );
+
+			if( alpha > textAlpha )
+			{
+				textAlpha = alpha;
+				lit       = mix( TextColour, HeadColour, other.head * HeadBoost );
+			}
+		}
 	}
 
-	//---------------------------------------------------------------------
-	//Composite.
-	//---------------------------------------------------------------------
-	vec3 lit = mix( TextColour, HeadColour, cell.head * HeadBoost );
-
-	//Glow is a lift on the trail's own brightness rather than a blur: a blur
-	//would need a second pass and a buffer, and at rain speed what reads as
-	//glow is mostly the trail refusing to go fully dark.
-	float body = cell.brightness + Glow * cell.brightness * ( 1.0 - cell.brightness );
-
-	float textAlpha = clamp( ink * body * TextOpacity, 0.0, 1.0 );
 	vec3  textRGB   = lit * textAlpha;   //premultiplied
 
 	vec4 back = vec4( BackColour * BackOpacity, BackOpacity );

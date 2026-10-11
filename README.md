@@ -6,9 +6,10 @@
 > headless GL context: it compares ~40,000 rendered cells against an independent
 > C++ implementation of the same maths, and separately renders a book, reads the
 > characters back out of the pixels and reassembles the text (see
-> [Status](#status)). It has **never been loaded into Resolume** — only compiled,
-> rendered and measured offline. Check it in your own rig before trusting it in a
-> show.
+> [Status](#status)). It has been loaded into Resolume **only once**, to reproduce
+> a bug ([#3](https://github.com/stoatworks-labs/downpour/issues/3)); otherwise it
+> has only been compiled, rendered and measured offline. Check it in your own rig
+> before trusting it in a show.
 
 Falling columns of characters — digital rain — for [Resolume](https://resolume.com)
 Arena and Avenue, as a pair of FFGL plugins.
@@ -206,16 +207,20 @@ what reads as digital rain rather than as a screensaver.
 
 ## Status
 
-Verified offline. The Resolume build has never been loaded into Resolume. The
-OpenFX build of v1.0.9 renders as a Fusion tool in DaVinci Resolve Studio 21.1
-on macOS, and its generator's rain moves there; v1.0.8's failed every frame on
-that page. No other page of Resolve, and no other OpenFX host, has been tried.
+Verified offline. The Resolume build has been loaded into Resolume once, to
+reproduce [#3](https://github.com/stoatworks-labs/downpour/issues/3): v1.0.10 in
+Resolume Arena 7.27.1 on Windows, where Glyph Size above 0.75 cropped every glyph
+to its cell. The fix is checked by `--overhang` below and has not been run in
+Resolume. The OpenFX build of v1.0.9 renders as a Fusion tool in DaVinci Resolve
+Studio 21.1 on macOS, and its generator's rain moves there; v1.0.8's failed every
+frame on that page. No other page of Resolve, and no other OpenFX host, has been tried.
 `tools/verify.sh` runs:
 
 | Check | What it proves |
 | --- | --- |
 | `--rain` | The shader's arithmetic against an independent C++ implementation, over ~40,000 cells: every direction, three resolutions, mutation on and off, and a drop that has wrapped. Worst disagreement ~3e-6. |
 | `--readback` | A rendered frame of *Alice* read back character by character out of the pixels and reassembled — **100%**. Covers UTF-8 decode, atlas build, slot mapping, the stream texture and the glyph fetch. |
+| `--overhang` | A lone T at Glyph Size 1.0 reaches past the top of its cell and is drawn whole: 1.6 times its size at 0.75 both ways, top bar and all. Fails against the shader from before #3 was fixed. |
 | `--font` | The drawn face's own invariants, and where every glyph in the atlas came from. |
 | `sweep.py` | All 30 controls move the picture. This is the only thing that catches a GLSL uniform whose name does not match the C++, which is silent everywhere else. |
 | `lipo` / `nm` | The macOS bundles are universal and export `plugMain`. |

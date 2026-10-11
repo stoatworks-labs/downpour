@@ -38,6 +38,7 @@ handling.
 - Everything: `tools/verify.sh`
 - Shader vs `Rain.cpp`: `./build/dptest --rain`
 - A document through the atlas and back: `./build/dptest --readback`
+- A glyph larger than its cell drawn whole, not cropped: `./build/dptest --overhang`
 - The face's invariants and where glyphs came from: `./build/dptest --font`
 - No dead controls: `python3 tools/sweep.py`
 

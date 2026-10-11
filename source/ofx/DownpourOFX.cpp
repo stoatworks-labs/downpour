@@ -261,6 +261,14 @@ public:
 		const double spanY       = shortSide / cellPxY * std::max( s.glyphScale, 0.001 );
 		const double drawnPx     = shortSide * std::max( s.glyphScale, 0.001 );
 
+		//Above a glyph scale of 1 (Glyph Size past 0.75) the glyph overhangs its
+		//cell by ( span - 1 ) / 2 on each side, at most 0.3 of a cell, so a pixel
+		//in that band also asks the nearer neighbour on each axis and the
+		//diagonal between them: the shader's loop, step for step. Without it
+		//every glyph was cropped to its own cell (downpour#3).
+		const double overhangX = std::max( 0.5 * ( spanX - 1.0 ), 0.0 );
+		const double overhangY = std::max( 0.5 * ( spanY - 1.0 ), 0.0 );
+
 		for( int y = window.y1; y < window.y2; ++y )
 		{
 			if( _effect.abort() )
@@ -280,30 +288,60 @@ public:
 
 				const Cell cell = Evaluate( s.state, cellX, cellY );
 
-				float ink = 0.0f;
-				if( cell.brightness > 0.0f )
+				const double withinX = gridX - cellX;
+				const double withinY = gridY - cellY;
+				const int towardX    = withinX < 0.5 ? -1 : 1;
+				const int towardY    = withinY < 0.5 ? -1 : 1;
+				const bool reachX    = withinX < overhangX || withinX > 1.0 - overhangX;
+				const bool reachY    = withinY < overhangY || withinY > 1.0 - overhangY;
+
+				//Where two glyphs overlap the brighter one wins, with its own
+				//cell's head colour.
+				float textAlpha = 0.0f;
+				float head      = 0.0f;
+
+				for( int ny = 0; ny < 2; ++ny )
 				{
-					const double withinX = gridX - cellX;
-					const double withinY = gridY - cellY;
+					for( int nx = 0; nx < 2; ++nx )
+					{
+						if( ( nx == 1 && !reachX ) || ( ny == 1 && !reachY ) )
+							continue;
 
-					double localX = ( withinX - 0.5 * ( 1.0 - spanX ) ) / spanX;
-					const double localY = ( withinY - 0.5 * ( 1.0 - spanY ) ) / spanY;
-					if( s.mirror )
-						localX = 1.0 - localX;
+						const int offsetX = nx * towardX;
+						const int offsetY = ny * towardY;
+						const int indexX  = cellX + offsetX;
+						const int indexY  = cellY + offsetY;
+						if( indexX < 0 || indexY < 0 || indexX >= columns || indexY >= rows )
+							continue;
 
-					const int position = d.streamSlots.empty()
-											 ? kBlankSlot
-											 : d.streamSlots[ size_t( cell.stream ) % d.streamSlots.size() ];
-					ink = sampleGlyph( d, position, localX, localY, drawnPx );
+						const Cell other = ( nx == 0 && ny == 0 ) ? cell : Evaluate( s.state, indexX, indexY );
+						if( other.brightness <= 0.0f )
+							continue;
+
+						double localX       = ( withinX - offsetX - 0.5 * ( 1.0 - spanX ) ) / spanX;
+						const double localY = ( withinY - offsetY - 0.5 * ( 1.0 - spanY ) ) / spanY;
+						if( s.mirror )
+							localX = 1.0 - localX;
+
+						const int position = d.streamSlots.empty()
+												 ? kBlankSlot
+												 : d.streamSlots[ size_t( other.stream ) % d.streamSlots.size() ];
+						const float ink = sampleGlyph( d, position, localX, localY, drawnPx );
+
+						const float body  = other.brightness + s.glow * other.brightness * ( 1.0f - other.brightness );
+						const float alpha = std::clamp( ink * body * s.textOpacity, 0.0f, 1.0f );
+						if( alpha > textAlpha )
+						{
+							textAlpha = alpha;
+							head      = other.head;
+						}
+					}
 				}
 
 				//--- composite, exactly as the shader --------------------------
-				const float litR = s.textR + ( s.headR - s.textR ) * cell.head * s.headBoost;
-				const float litG = s.textG + ( s.headG - s.textG ) * cell.head * s.headBoost;
-				const float litB = s.textB + ( s.headB - s.textB ) * cell.head * s.headBoost;
-
-				const float body      = cell.brightness + s.glow * cell.brightness * ( 1.0f - cell.brightness );
-				const float textAlpha = std::clamp( ink * body * s.textOpacity, 0.0f, 1.0f );
+				const float litR = s.textR + ( s.headR - s.textR ) * head * s.headBoost;
+				const float litG = s.textG + ( s.headG - s.textG ) * head * s.headBoost;
+				const float litB = s.textB + ( s.headB - s.textB ) * head * s.headBoost;
 
 				double r, g, b, a;
 				const double backA = s.backOpacity;

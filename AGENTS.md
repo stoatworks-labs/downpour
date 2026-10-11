@@ -38,9 +38,14 @@ Three things follow, and all three are the reason it is written this way:
 
 - **One pass.** asciify needs three because its cell pass *averages the incoming
   picture*, and a reduction has to happen at its own resolution. Downpour reduces
-  nothing, so every pixel works out which cell it is in and asks. If this ever
-  seems slow, adding a cell buffer is the wrong reach — there is nothing to cache
-  in it that is not two hashes and a multiply away.
+  nothing, so every pixel works out which cell it is in and asks. Above a Glyph
+  Size of 0.75 a glyph is bigger than its cell and overhangs it by up to 0.3 of a
+  cell, so a pixel in that band along a cell edge also asks the nearer neighbour
+  on each axis and the diagonal between them — four cells at most, and only its
+  own below 0.75 — and the brightest glyph wins. Asking only its own cell cropped
+  every glyph to the cell (downpour#3). The OFX renderer does the same, step for
+  step. If this ever seems slow, adding a cell buffer is the wrong reach — there
+  is nothing to cache in it that is not two hashes and a multiply away.
 - **The stream is one thing.** A character set and a loaded book are both just a
   list of code points; `Flow::Scatter` indexes it by hash and `Flow::Sequence`
   indexes it consecutively. One texture, one length uniform, one place where a
@@ -164,6 +169,19 @@ otherwise takes half its weight from the neighbouring slot.
 slots of 66 texels is 2046 of 2048; dividing by 2046 is invisible mid-stroke and
 shows as a sliver of the next slot along the far edge.
 
+**Sample the atlas with `textureGrad`, from derivatives taken before anything
+branches.** `texture()` takes its mip level from derivatives across a 2x2 pixel
+quad. Where a quad straddles a cell edge `local` jumps by a whole cell, the GPU
+picks the coarsest mip, and a faint line of averaged atlas ran along every edge of
+a lit cell. Inside a branch the implicit derivative is undefined as well, which
+showed as a wrong mip on the quads at the edge of the glyph body, where
+`SampleGlyph` returns early for some pixels and not others. `main()` takes
+`dFdx( gridUV ) / span` up front: `gridUV` runs on smoothly across a cell edge, so
+that is the derivative `local` has without the jump. Measured 2026-10-11 against
+the old shader at Glyph Size 0.75: every pixel that changed sits on a quad
+straddling a cell edge or a glyph-body edge, and none elsewhere. The OFX renderer
+picks its mip from the drawn size, so it never had the seam.
+
 **The stream texture must be read with `texelFetch`, never `texture`.** Its
 values are atlas slot numbers, not quantities. Interpolate two and you address a
 third glyph that neither cell chose.
@@ -234,8 +252,16 @@ on a moving sequence, on a still and under `--quirks fusion`.
 cells of `#` or `.`, no codepoint drawn twice. A typo there does not fail to
 compile; it silently shortens a stroke.
 
+`--overhang` renders a lone T in the built-in face at Glyph Size 0.75 and 1.0 and
+checks that the larger one reaches past the top of its cell, is 1.6 times the
+size both ways, and still has its top bar. `--readback` cannot see a glyph
+cropped to its cell, because it renders at 0.75, where the glyph exactly fits.
+Against the shader before downpour#3 it fails on every glyph it measures.
+
 **Host verification is Allan's, not an agent's.** Driving the Resolume GUI from a
-session is unreliable. Nothing in this repo has been loaded into Resolume yet.
+session is unreliable. The only time this plugin has been loaded into Resolume
+was to reproduce downpour#3, with the v1.0.10 release in Resolume Arena 7.27.1 on
+Windows. The fix for it has not been run there.
 
 ---
 

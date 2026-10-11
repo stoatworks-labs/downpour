@@ -17,6 +17,7 @@
                           resolve to its regular face
         --rain            the GPU's cells against Rain.cpp, exactly
         --readback        render a document and read the text back off the frame
+        --overhang        a glyph above Glyph Size 0.75 overhangs its cell whole
 
     `--rain` and `--readback` are the two that matter, and they check different
     halves. `--rain` compares the shader's arithmetic against the C++ mirror in
@@ -1003,6 +1004,282 @@ int readbackCheck()
 	std::printf( "  ok   the document round-trips through the atlas and the shader\n" );
 	return 0;
 }
+
+//---------------------------------------------------------------------------
+// --overhang
+//
+// Above a Glyph Size of 0.75 a glyph is bigger than its cell. The shader used
+// to ask only the cell a pixel was in, so every glyph was cropped to its cell,
+// and since the built-in face sits high in its body it was the tops that went:
+// T read as | (downpour#3). `--readback` cannot see it -- it renders at exactly
+// 0.75, where the glyph fits.
+//
+// A lone T, white on black, in the built-in face, with cells of exactly 80 px.
+// Each lit cell whose eight neighbours are dark is measured within the cell and
+// 0.4 of a cell around it, at Glyph Size 0.75 (scale 1, the glyph fills the
+// cell) and at 1.0 (scale 1.6). At 1.0 the ink has to reach above the cell, be
+// 1.6 times the size it was at 0.75, and still have the T's top bar on it.
+//---------------------------------------------------------------------------
+struct InkBox
+{
+	bool any      = false;
+	int left      = 0;
+	int top       = 0;//pixels from the top of the frame
+	int width     = 0;
+	int height    = 0;
+	int topRowRun = 0;//leftmost to rightmost ink on the topmost row of ink
+};
+
+/// The ink in a window of a frame read straight out of GL (bottom row first),
+/// with `top` counted from the top of the frame. Ink is anything at half the
+/// window's own peak or more, so the trail's brightness falls out of it.
+InkBox measureInk( const std::vector< unsigned char >& pixels, int width, int height,
+                   int x0, int y0, int x1, int y1 )
+{
+	auto at = [ & ]( int x, int y ) {
+		return pixels[ ( static_cast< size_t >( height - 1 - y ) * width + x ) * 4 ];
+	};
+
+	int peak = 0;
+	for( int y = y0; y < y1; ++y )
+		for( int x = x0; x < x1; ++x )
+			peak = std::max( peak, static_cast< int >( at( x, y ) ) );
+
+	InkBox box;
+	if( peak < 16 )
+		return box;
+	const int threshold = ( peak + 1 ) / 2;
+
+	int left = x1, right = x0 - 1, top = y1, bottom = y0 - 1;
+	for( int y = y0; y < y1; ++y )
+	{
+		for( int x = x0; x < x1; ++x )
+		{
+			if( at( x, y ) < threshold )
+				continue;
+			left   = std::min( left, x );
+			right  = std::max( right, x );
+			top    = std::min( top, y );
+			bottom = std::max( bottom, y );
+		}
+	}
+
+	int runLeft = x1, runRight = x0 - 1;
+	for( int x = x0; x < x1; ++x )
+	{
+		if( at( x, top ) < threshold )
+			continue;
+		runLeft  = std::min( runLeft, x );
+		runRight = std::max( runRight, x );
+	}
+
+	box.any       = true;
+	box.left      = left;
+	box.top       = top;
+	box.width     = right - left + 1;
+	box.height    = bottom - top + 1;
+	box.topRowRun = runRight - runLeft + 1;
+	return box;
+}
+
+/// Dark now and a hundredth of a row either side of now. A cell on the very
+/// edge of a drop could be lit on the GPU and dark here, or the other way
+/// round, and a lit neighbour would put its own glyph in the window.
+bool darkWithMargin( const RainState& state, int column, int row )
+{
+	for( float nudge : { -0.01f, 0.0f, 0.01f } )
+	{
+		RainState moved = state;
+		moved.travel += nudge;
+		if( Evaluate( moved, column, row ).brightness > 0.0f )
+			return false;
+	}
+	return true;
+}
+
+int overhangCheck()
+{
+	const int cellPx  = 80;
+	const int columns = 24;
+	const int width   = columns * cellPx;
+	const int height  = 14 * cellPx;
+	const int rows    = RowsForAspect( columns, width, height );
+
+	DownpourPlugin plugin( false );
+
+	// The built-in face, so the test does not depend on what is installed, and
+	// a stream that is a single T. No mirroring, mutation, head colour or glow,
+	// white on black: ink is the red channel and nothing else. Trail 0 and a
+	// third of the columns lit leaves lone cells with nothing either side.
+	plugin.SetFloatParameter( PT_FONT, 0.0f );
+	plugin.SetFloatParameter( PT_SOURCE, static_cast< float >( Source::CustomText ) );
+	plugin.SetTextParameter( PT_CUSTOM_TEXT, "T" );
+	plugin.SetFloatParameter( PT_SYNC, static_cast< float >( SyncMode::Free ) );
+	plugin.SetFloatParameter( PT_DIRECTION, static_cast< float >( Direction::Down ) );
+	plugin.SetFloatParameter( PT_MIRROR, 0.0f );
+	plugin.SetFloatParameter( PT_MUTATE, 0.0f );
+	plugin.SetFloatParameter( PT_TRAIL, 0.0f );
+	plugin.SetFloatParameter( PT_DENSITY, 0.35f );
+	plugin.SetFloatParameter( PT_AUDIO_LEVEL, 0.0f );
+	plugin.SetFloatParameter( PT_HEAD_BOOST, 0.0f );
+	plugin.SetFloatParameter( PT_GLOW, 0.0f );
+	plugin.SetFloatParameter( PT_TEXT_R, 1.0f );
+	plugin.SetFloatParameter( PT_TEXT_G, 1.0f );
+	plugin.SetFloatParameter( PT_TEXT_B, 1.0f );
+	plugin.SetFloatParameter( PT_TEXT_OPACITY, 1.0f );
+	plugin.SetFloatParameter( PT_BACK_R, 0.0f );
+	plugin.SetFloatParameter( PT_BACK_G, 0.0f );
+	plugin.SetFloatParameter( PT_BACK_B, 0.0f );
+	plugin.SetFloatParameter( PT_BACK_OPACITY, 1.0f );
+
+	// As --readback does: ask Controls.cpp for the slider position rather than
+	// carry a second copy of its curve.
+	float columnsParam = 0.0f;
+	for( int step = 0; step <= 1000; ++step )
+	{
+		const float candidate = static_cast< float >( step ) / 1000.0f;
+		if( ColumnsFromParam( candidate ) >= columns )
+		{
+			columnsParam = candidate;
+			break;
+		}
+	}
+	plugin.SetFloatParameter( PT_COLUMNS, columnsParam );
+	plugin.Invalidate();
+
+	Target target = makeTarget( width, height, false );
+
+	int measured = 0;
+	int failed   = 0;
+	int shown    = 0;
+
+	// Several moments, so the drops have moved on and there are enough lone
+	// cells to be worth the name.
+	for( double time : { 3.0, 5.5, 8.0, 10.5, 13.0, 17.5, 21.0, 26.5 } )
+	{
+		std::vector< unsigned char > frames[ 2 ];
+		const float sizes[ 2 ] = { 0.75f, 1.0f };
+		bool rendered          = true;
+		for( int i = 0; i < 2 && rendered; ++i )
+		{
+			plugin.SetFloatParameter( PT_GLYPH_SCALE, sizes[ i ] );
+			rendered = render( plugin, target, time );
+			if( rendered )
+				frames[ i ] = readBytes( target );
+		}
+		if( !rendered )
+		{
+			std::fprintf( stderr, "overhang: render failed at t=%.1f\n", time );
+			releaseTarget( target );
+			return 1;
+		}
+
+		const RainState state = plugin.CurrentState( width, height );
+		if( state.columns != columns || state.rows != rows || rows * cellPx != height )
+		{
+			std::printf( "  FAIL asked for %dx%d cells of %d px, got %dx%d\n", columns, rows, cellPx,
+			             state.columns, state.rows );
+			releaseTarget( target );
+			return 1;
+		}
+
+		// Inside the frame by a cell, so the window round it is all on screen.
+		for( int row = 1; row < rows - 1; ++row )
+		{
+			for( int column = 1; column < columns - 1; ++column )
+			{
+				// Well lit, which also keeps the cell below it -- the next one
+				// the head reaches -- clear of the leading edge.
+				if( Evaluate( state, column, row ).brightness < 0.3f )
+					continue;
+
+				bool alone = true;
+				for( int dy = -1; dy <= 1 && alone; ++dy )
+					for( int dx = -1; dx <= 1 && alone; ++dx )
+						if( ( dx != 0 || dy != 0 ) && !darkWithMargin( state, column + dx, row + dy ) )
+							alone = false;
+				if( !alone )
+					continue;
+
+				const int margin = cellPx * 4 / 10;
+				const int x0     = column * cellPx - margin;
+				const int y0     = row * cellPx - margin;
+				const int x1     = ( column + 1 ) * cellPx + margin;
+				const int y1     = ( row + 1 ) * cellPx + margin;
+
+				const InkBox fits  = measureInk( frames[ 0 ], width, height, x0, y0, x1, y1 );
+				const InkBox large = measureInk( frames[ 1 ], width, height, x0, y0, x1, y1 );
+				++measured;
+
+				if( !fits.any || !large.any )
+				{
+					std::printf( "  FAIL column %d row %d: no ink at %s\n", column, row,
+					             !fits.any ? "Glyph Size 0.75" : "Glyph Size 1.0" );
+					++failed;
+					continue;
+				}
+
+				const double above       = static_cast< double >( row * cellPx - large.top ) / cellPx;
+				const double tall        = static_cast< double >( large.height ) / fits.height;
+				const double wide        = static_cast< double >( large.width ) / fits.width;
+				const double topBar      = static_cast< double >( large.topRowRun ) / large.width;
+				const double topBarFits  = static_cast< double >( fits.topRowRun ) / fits.width;
+
+				std::vector< std::string > wrong;
+				// The setup itself: at 0.75 a T that fits its cell, bar and all.
+				if( topBarFits < 0.6 )
+					wrong.push_back( "no top bar even at 0.75" );
+				// The ink reaches past the top of the cell...
+				if( above < 0.1 )
+					wrong.push_back( "ink stops at the cell's top edge" );
+				// ...the whole glyph scaled, not the part of it that fits...
+				if( std::fabs( tall - 1.6 ) > 0.05 || std::fabs( wide - 1.6 ) > 0.05 )
+					wrong.push_back( "ink box is not 1.6x" );
+				// ...and the T still has its top bar.
+				if( topBar < 0.6 )
+					wrong.push_back( "top bar missing" );
+
+				if( !wrong.empty() || shown < 4 )
+				{
+					std::string why;
+					for( const std::string& reason : wrong )
+						why += ( why.empty() ? "" : "; " ) + reason;
+
+					std::printf( "  %s t=%-4.1f column %2d row %2d: %dx%d px at 0.75, %dx%d at 1.0 "
+					             "(x%.2f tall, x%.2f wide), ink %+.2f cell above the top edge, "
+					             "top row %.0f%% of the width%s%s\n",
+					             wrong.empty() ? "ok  " : "FAIL", time, column, row, fits.width, fits.height,
+					             large.width, large.height, tall, wide, above, 100.0 * topBar,
+					             why.empty() ? "" : " -- ", why.c_str() );
+					++shown;
+				}
+				if( !wrong.empty() )
+					++failed;
+			}
+		}
+	}
+
+	releaseTarget( target );
+
+	// Nothing to measure is a failure, not a pass: it means the setup above has
+	// stopped producing lone cells and the check is looking at nothing.
+	if( measured < 4 )
+	{
+		std::printf( "  FAIL only %d lone lit cells found; the check needs at least 4\n", measured );
+		return 1;
+	}
+
+	if( failed > 0 )
+	{
+		std::printf( "  FAIL %d of %d lone glyphs are cropped to their cell at Glyph Size 1.0\n", failed, measured );
+		return 1;
+	}
+
+	std::printf( "  ok   %d lone glyphs: at Glyph Size 1.0 each overhangs its cell, whole, top bar and all\n",
+	             measured );
+	return 0;
+}
+
 //---------------------------------------------------------------------------
 // --sequence
 //
@@ -1484,6 +1761,7 @@ int main( int argc, char** argv )
 	bool doFont   = false;
 	bool doRain   = false;
 	bool doRead   = false;
+	bool doOver   = false;
 	bool doEffect = false;
 	std::string sequenceDir;
 	std::string cueSheet;
@@ -1518,6 +1796,7 @@ int main( int argc, char** argv )
 		else if( arg == "--font" )   doFont = true;
 		else if( arg == "--rain" )   doRain = true;
 		else if( arg == "--readback" ) doRead = true;
+		else if( arg == "--overhang" ) doOver = true;
 		// Drives the effect bundle's class instead of the source's: same rain,
 		// over a synthetic clip. Mix and the compositing order have no coverage
 		// at all without it, and they are half of what the second bundle is for.
@@ -1533,12 +1812,13 @@ int main( int argc, char** argv )
 		}
 	}
 
-	if( outPath.empty() && atlasPath.empty() && sequenceDir.empty() && !doList && !doFont && !doRain && !doRead )
+	if( outPath.empty() && atlasPath.empty() && sequenceDir.empty() && !doList && !doFont && !doRain && !doRead
+	    && !doOver )
 	{
 		std::fprintf( stderr,
 		              "usage: dptest [--out PATH] [--atlas PATH] [--list] [--font] [--rain]\n"
 		              "              [--speed] [--presets]\n"
-		              "              [--readback] [--effect] [--time T] [--width W] [--height H]\n"
+		              "              [--readback] [--overhang] [--effect] [--time T] [--width W] [--height H]\n"
 		              "              [--set Name=value]...\n"
 		              "       dptest --sequence DIR --script CUES [--seconds S] [--fps F]\n"
 		              "              [--effect] [--width W] [--height H]\n" );
@@ -1564,6 +1844,12 @@ int main( int argc, char** argv )
 	{
 		std::printf( "--readback: a document through the atlas and back\n" );
 		status |= readbackCheck();
+	}
+
+	if( doOver )
+	{
+		std::printf( "--overhang: a glyph larger than its cell, drawn whole\n" );
+		status |= overhangCheck();
 	}
 
 	if( !sequenceDir.empty() )

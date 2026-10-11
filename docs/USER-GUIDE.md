@@ -16,9 +16,13 @@ OpenFX plugin for Resolve, Vegas, Nuke and Natron.
 > mapping, the stream texture and the glyph fetch in one go. All 30 controls demonstrably move the
 > picture.
 >
-> **It has never been loaded into Resolume** — only compiled, rendered and measured offline. The
-> FFGL parameter and clock plumbing is the part no harness here reaches. Try it on a spare layer
-> before you put it in a show.
+> **It has been loaded into Resolume once**, to reproduce a reported bug: v1.0.10 in Resolume
+> Arena 7.27.1 on Windows, where Glyph Size above 0.75 cropped every glyph to its cell
+> ([issue #3](https://github.com/stoatworks-labs/downpour/issues/3)). The fix, which lets a large
+> glyph overlap its neighbours, is checked offline only and has not been run in Resolume. Beyond
+> that one reproduction it has only been compiled, rendered and measured offline; the FFGL
+> parameter and clock plumbing is the part no harness here reaches. Try it on a spare layer before
+> you put it in a show.
 >
 > Released at **v1.0.10**, which resolves a font family to its regular face. v1.0.9's OpenFX
 > build was the first to render on DaVinci Resolve's Fusion page, with the rain falling at the
@@ -91,6 +95,9 @@ different rig in a different country. Downpour also writes the resolved **family
 composition alongside the index, and prefers the name when the two disagree — names survive the
 trip between machines; dropdown positions do not.
 
+The built-in face draws ASCII and half-width katakana only, 140 glyphs, so accented letters such
+as Å, É, Î and Ö draw blank unless you choose a font that has them.
+
 ---
 
 ## Nothing about it drifts
@@ -114,7 +121,9 @@ included — rather than leaving a shimmering wall behind slower heads.
 
 **Text** — Source, Characters, Custom Text, Text File, Mirror Glyphs.
 
-**Font** — Font, Font File, Glyph Size.
+**Font** — Font, Font File, Glyph Size. At 0.75, the default, a glyph exactly fills its cell.
+Above 0.75 it grows past the cell, to 1.6 times that size at the top of the travel, and overlaps
+the neighbouring columns and rows. Where two glyphs overlap, the brighter one shows.
 
 **Colour** — Text colour and opacity, Head colour and boost, Background colour and opacity, Glow.
 

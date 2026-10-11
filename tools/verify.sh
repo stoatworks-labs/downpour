@@ -10,6 +10,7 @@
 #                     come from, and does a family load its regular face
 #   --rain            does the shader's arithmetic match Rain.cpp
 #   --readback        does a document survive decode, atlas, texture and shader
+#   --overhang        is a glyph larger than its cell drawn whole, not cropped
 #   sweep.py          does every control actually reach the picture
 #   lipo              is the macOS build really universal
 #
@@ -158,6 +159,11 @@ check "$BUILD/dptest" --rain
 
 step "a document through the atlas and back"
 check "$BUILD/dptest" --readback
+
+step "a glyph larger than its cell is drawn whole"
+# --readback renders at Glyph Size 0.75, where a glyph exactly fills its cell,
+# so it cannot see a glyph cropped to its cell above that (downpour#3).
+check "$BUILD/dptest" --overhang
 
 step "no dead controls"
 check python3 tools/sweep.py --build "$BUILD"
