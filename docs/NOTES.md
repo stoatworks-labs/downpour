@@ -93,7 +93,7 @@ keep** — it caught glyphs rendering upside down, which `--rain` cannot see
 because it never looks at a glyph.
 
 **Glyph Size above 0.75 cropped every glyph to its cell: downpour#3, fixed
-2026-10-11, unreleased.** Reported as "Top of Glyphs clipped" and reproduced in
+2026-10-11, released in v1.0.11.** Reported as "Top of Glyphs clipped" and reproduced in
 Resolume Arena 7.27.1 on Windows with v1.0.10, the first time downpour had been
 loaded into Resolume at all. Glyph Size maps to a scale of 0.25 to 1.6 and reaches
 1.0, a glyph that exactly fills its cell, at 0.75. Every pixel asked only its own

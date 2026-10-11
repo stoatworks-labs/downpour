@@ -18,14 +18,15 @@ OpenFX plugin for Resolve, Vegas, Nuke and Natron.
 >
 > **It has been loaded into Resolume once**, to reproduce a reported bug: v1.0.10 in Resolume
 > Arena 7.27.1 on Windows, where Glyph Size above 0.75 cropped every glyph to its cell
-> ([issue #3](https://github.com/stoatworks-labs/downpour/issues/3)). The fix, which lets a large
-> glyph overlap its neighbours, is checked offline only and has not been run in Resolume. Beyond
+> ([issue #3](https://github.com/stoatworks-labs/downpour/issues/3)). The fix in v1.0.11, which lets a
+> large glyph overlap its neighbours, is checked offline only and has not been run in Resolume. Beyond
 > that one reproduction it has only been compiled, rendered and measured offline; the FFGL
 > parameter and clock plumbing is the part no harness here reaches. Try it on a spare layer before
 > you put it in a show.
 >
-> Released at **v1.0.10**, which resolves a font family to its regular face. v1.0.9's OpenFX
-> build was the first to render on DaVinci Resolve's Fusion page, with the rain falling at the
+> Released at **v1.0.11**, where a glyph larger than its cell (Glyph Size above 0.75) overlaps
+> its neighbours instead of being cropped to its cell. v1.0.10 resolved a font family to its
+> regular face, and v1.0.9's OpenFX build was the first to render on DaVinci Resolve's Fusion page, with the rain falling at the
 > composition's frame rate; v1.0.8's failed every frame there. Only the
 > Fusion page has been tried — not Resolve's Edit or Color page, Vegas, Nuke or Natron.
 >
