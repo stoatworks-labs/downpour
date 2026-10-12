@@ -227,7 +227,8 @@ frame on that page. No other page of Resolve, and no other OpenFX host, has been
 | `sweep.py` | All 30 controls move the picture. This is the only thing that catches a GLSL uniform whose name does not match the C++, which is silent everywhere else. |
 | `lipo` / `nm` | The macOS bundles are universal and export `plugMain`. |
 
-Nothing here has been run in Resolume, on real footage, or against a projector.
+Apart from that one reproduction, nothing here has been run in Resolume, on real footage,
+or against a projector.
 
 ## Building
 
