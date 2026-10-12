@@ -20,7 +20,7 @@ OpenFX plugin for Resolve, Vegas, Nuke and Natron.
 > Arena 7.27.1 on Windows, where Glyph Size above 0.75 cropped every glyph to its cell
 > ([issue #3](https://github.com/stoatworks-labs/downpour/issues/3)). The fix in v1.0.11, which lets a
 > large glyph overlap its neighbours, is checked offline only and hasn't been run in Resolume. Beyond
-> that one reproduction it's only been compiled, rendered and measured offline; the FFGL
+> that one reproduction the Resolume build has only been compiled, rendered and measured offline; the FFGL
 > parameter and clock plumbing is the part no harness here reaches. Try it on a spare layer before
 > you put it in a show.
 >

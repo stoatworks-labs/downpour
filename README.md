@@ -7,9 +7,9 @@
 > implementation of the same maths, and separately renders a book, reads the
 > characters back out of the pixels and puts the text back together (see
 > [Status](#status)). It's been loaded into Resolume **only once**, to reproduce a bug
-> ([#3](https://github.com/stoatworks-labs/downpour/issues/3)); otherwise it's only been
-> compiled, rendered and measured offline. Check it in your own rig before you trust it
-> in a show.
+> ([#3](https://github.com/stoatworks-labs/downpour/issues/3)), and its OpenFX build has
+> run only on Resolve's Fusion page, on a Mac; otherwise it's only been compiled,
+> rendered and measured offline. Check it in your own rig before you trust it in a show.
 
 Falling columns of characters (digital rain, and yes, it does the green katakana) for
 [Resolume](https://resolume.com) Arena and Avenue, as a pair of FFGL plugins.
@@ -84,8 +84,10 @@ macOS builds are signed and notarised and open normally. The Windows builds are 
 
 ## OpenFX — Resolve, Vegas, Nuke, Natron
 
-The same effect also builds as an OpenFX plugin, so it runs in DaVinci Resolve
-(Edit and Color pages, and Fusion), Vegas Pro, Nuke and Natron. It's the identical
+The same effect also builds as an OpenFX plugin, for DaVinci Resolve (Edit and
+Color pages, and Fusion), Vegas Pro, Nuke and Natron, though it's only been run in
+Resolve, as a Fusion tool on macOS; the other pages and hosts are untested (see
+[Status](#status)). It's the identical
 rain: the OpenFX build calls the same Rain.cpp the shader is measured against, and one
 bundle has both plugins in it, the generator and Downpour Over.
 
