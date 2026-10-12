@@ -1,18 +1,18 @@
 # Downpour
 
 > **AI-assisted project.** This codebase was created with [Claude](https://claude.com/claude-code)
-> (Anthropic), directed and reviewed by a human author. The rain is verified
-> numerically by an offline harness that drives the real plugin class in a
-> headless GL context: it compares ~40,000 rendered cells against an independent
-> C++ implementation of the same maths, and separately renders a book, reads the
-> characters back out of the pixels and reassembles the text (see
-> [Status](#status)). It has been loaded into Resolume **only once**, to reproduce
-> a bug ([#3](https://github.com/stoatworks-labs/downpour/issues/3)); otherwise it
-> has only been compiled, rendered and measured offline. Check it in your own rig
-> before trusting it in a show.
+> (Anthropic), directed and reviewed by a human author. The rain's checked
+> numerically by an offline harness that drives the real plugin class in a headless
+> GL context. It compares ~40,000 rendered cells against an independent C++
+> implementation of the same maths, and separately renders a book, reads the
+> characters back out of the pixels and puts the text back together (see
+> [Status](#status)). It's been loaded into Resolume **only once**, to reproduce a bug
+> ([#3](https://github.com/stoatworks-labs/downpour/issues/3)); otherwise it's only been
+> compiled, rendered and measured offline. Check it in your own rig before you trust it
+> in a show.
 
-Falling columns of characters — digital rain — for [Resolume](https://resolume.com)
-Arena and Avenue, as a pair of FFGL plugins.
+Falling columns of characters (digital rain, and yes, it does the green katakana) for
+[Resolume](https://resolume.com) Arena and Avenue, as a pair of FFGL plugins.
 
 **Video:** [What it does, in 45 seconds](https://www.youtube.com/watch?v=Sdvmpz_GiTo)
 
@@ -25,18 +25,19 @@ Rendered by `dptest`, the offline harness.</sub>
 
 **<https://downpour-demo.stoatworks-labs.com>**
 
-Not the plugin — the GLSL from `source/Shaders.cpp`, copied across unedited and run in
-WebGL2 over clips generated in the page, with the parameters this plugin's
-constructor declares and the conversions its own code applies. No install, and
-nothing you load leaves your machine.
+It isn't the plugin. It's the GLSL from `source/Shaders.cpp`, copied across unedited and
+run in WebGL2 over clips generated in the page, with the parameters this plugin's
+constructor declares and the conversions its own code applies. There's nothing to
+install, and nothing you load leaves your machine.
 
-Both bundles are there — the source and the effect, compiled from one shader the same two ways this repository builds them. The drawn face and the four public domain passages come straight out of `source/GlyphData.cpp` and `texts/`.
+Both bundles are there, the source and the effect, compiled from one shader the same two
+ways this repo builds them. The drawn face and the four public domain passages come
+straight out of `source/GlyphData.cpp` and `texts/`.
 
-It is a port, so it is not evidence about the plugin: a browser is not Resolume,
-GLSL ES 3.00 is not desktop GL 4.1 core, and nothing on that page measures
-anything. The page says all of that itself, in a disclosure at the foot. The
-numbers worth trusting are in [Status](#status) and come from the offline
-harness in this repository.
+It's a port, so it isn't evidence about the plugin: a browser isn't Resolume,
+GLSL ES 3.00 isn't desktop GL 4.1 core, and nothing on that page measures
+anything. The page says so itself, in a disclosure at the foot. The numbers worth
+trusting are in [Status](#status) and come from the offline harness in this repo.
 
 <!-- downloads:start -->
 
@@ -84,14 +85,15 @@ macOS builds are signed and notarised and open normally. The Windows builds are 
 ## OpenFX — Resolve, Vegas, Nuke, Natron
 
 The same effect also builds as an OpenFX plugin, so it runs in DaVinci Resolve
-(Edit and Color pages, and Fusion), Vegas Pro, Nuke and Natron. It is
-the identical rain — the OpenFX build calls the same Rain.cpp the shader is measured against, and one bundle carries both plugins: the generator and Downpour Over.
+(Edit and Color pages, and Fusion), Vegas Pro, Nuke and Natron. It's the identical
+rain: the OpenFX build calls the same Rain.cpp the shader is measured against, and one
+bundle has both plugins in it, the generator and Downpour Over.
 
 **Resolve's Fusion page reports the frame rate on the effect but not on its clips.**
 The first OpenFX builds read a clip's rate, which Fusion leaves out, and failed
 every render there. Now Downpour asks the output clip, the source clip and then the
 effect, so in Fusion the rain falls and mutates at the timeline's own rate (checked
-at 24 and 25 fps). It assumes 24 fps, Resolve's default timeline rate, only where a
+at 24 and 25 fps). It only assumes 24 fps, Resolve's default timeline rate, where a
 host reports no rate at all.
 
 Grab the `downpour-ofx-*` zip for your platform from the release and copy
@@ -103,7 +105,7 @@ Windows  C:\Program Files\Common Files\OFX\Plugins\
 ```
 
 
-Both plugins are in every download — drop them into
+Both plugins are in every download. Drop them into
 `~/Documents/Resolume Arena/Extra Effects` (or the Avenue equivalent) and restart
 Resolume. The macOS builds are Developer ID-signed and notarised, so they load
 with no Gatekeeper step.
@@ -120,10 +122,10 @@ apart.
 
 ## It reads whatever you give it
 
-The rain does not know the difference between an alphabet and a book. Both are a
-list of characters; the only question is whether it picks from them at random or
-reads them in order — and the Source control decides that, because the two
-combinations it rules out are both traps. Scattering a novel is an expensive way
+The rain doesn't know the difference between an alphabet and a book. Both are a
+list of characters, and the only question is whether it picks from them at random
+or reads them in order. The Source control decides that for you, because the two
+combinations it rules out are both traps: scattering a novel is an expensive way
 to make noise, and sequencing a six-character alphabet is a marquee that repeats
 every six cells.
 
@@ -133,25 +135,25 @@ every six cells.
 | **Code** — a token grammar, not random characters. What makes text read as *code* at rain speed is its punctuation density: brackets, semicolons, arrows, hex literals and camelCase. Prose has almost none of them. | **A document, played out in order.** Consecutive characters down a column, consecutive columns across the frame, advancing by a screenful each time the drops recycle — so the text genuinely streams past rather than being sampled from. |
 
 **Junk** draws from katakana, katakana with digits, hex, binary, ASCII, digits or
-latin. **Four public domain works** are built in — *Alice in Wonderland*, Plato's
+latin. **Four public domain works** are built in: *Alice in Wonderland*, Plato's
 allegory of the cave, Hamlet's soliloquy, and Descartes on methodical doubt and
 the cogito. Or type your own text, or point it at any `.txt` on disk.
 
 ## Any font, and it cannot leave you with a blank frame
 
 Pick from the fonts installed on the machine, or point it at any `.ttf`, `.otf`
-or `.ttc`. There is also a bitmap face drawn for this project, and it is the
+or `.ttc`. There's also a bitmap face drawn for this project, and it's the
 floor rather than a placeholder: **fallback is per character, not per font.**
 Choose a font with no katakana and you get your font for the latin and the
 built-in face for the katakana, instead of a grid of empty rectangles.
 
 That matters more than it sounds. A composition stores a font *path*, and the
 next machine is a different rig in a different country. A plugin whose picture
-depends on a path that may not resolve needs somewhere to land, and landing on a
-blank frame in front of an audience is not a defensible answer. Downpour also
-writes the resolved **family name** into the composition alongside the index, and
-prefers the name when the two disagree — names survive the trip between machines;
-dropdown positions do not.
+depends on a path that might not resolve needs somewhere to land, and a blank frame
+in front of an audience isn't a good place to land. Downpour also writes the
+resolved **family name** into the composition alongside the index, and prefers the
+name when the two disagree, because names survive the trip between machines and
+dropdown positions don't.
 
 ## Over your footage
 
@@ -166,41 +168,41 @@ A cell is a **closed-form function of its column, its row and the host's clock**
 There is no simulation state anywhere: no feedback texture, no ping-pong buffer,
 no "previous frame".
 
-That is not an implementation detail, it is the feature. A state-based rain
-advances one frame at a time, so its speed is whatever the frame rate happens to
-be — and Resolume's frame rate drops when the show gets heavy. This one runs at
+It's the most useful thing about it. A state-based rain advances one frame at a
+time, so its speed is whatever the frame rate happens to be, and Resolume's frame
+rate drops when the show gets heavy. This one runs at
 the speed you asked for whether the host is managing 60 fps or 20, looks
 identical at 720p and at 4K, and can be scrubbed to any point without playing
 what came before.
 
 ## Controls
 
-**Rain** — Speed, Direction (down, up, right, left), Columns, Trail, Density,
+**Rain:** Speed, Direction (down, up, right, left), Columns, Trail, Density,
 Mutation, Fade, Seed. Mutation scales with Speed, so winding Speed down calms
-the whole picture — glyph churn included — rather than leaving a shimmering
+the whole picture (glyph churn included) rather than leaving a shimmering
 wall behind slower heads.
 
-**Text** — Source, Characters, Custom Text, Text File, Mirror Glyphs.
+**Text:** Source, Characters, Custom Text, Text File, Mirror Glyphs.
 
-**Font** — Font, Font File, Glyph Size.
+**Font:** Font, Font File, Glyph Size.
 
-**Colour** — Text colour and opacity, Head colour and boost, Background colour
+**Colour:** Text colour and opacity, Head colour and boost, Background colour
 and opacity, Glow.
 
-**Output** — Mix (the effect variant: how the rain sits over the clip).
+**Output:** Mix (the effect variant: how the rain sits over the clip).
 
-**Tempo** — Sync (Free, Beat, Bar). Free runs Speed in rows per second on the
+**Tempo:** Sync (Free, Beat, Bar). Free runs Speed in rows per second on the
 host's clock. Beat and Bar lock the rain to Resolume's BPM: Speed becomes rows
 per beat or per bar, and each interval's travel is eased in hard at the front,
 so the rain visibly kicks on the grid rather than merely matching its average
 speed to it.
 
-**Audio** — Audio (an FFT input: pick an audio source on it in Resolume) and
+**Audio:** Audio (an FFT input: pick an audio source on it in Resolume) and
 Audio Level. Each column is gated by its own slice of the spectrum, low
 frequencies at the left of the frame, so the bass end flares on the kick and
 the treble end shimmers with the hats. This is per-column: Resolume's own
-per-parameter audio link can pump one slider, but it cannot give sixty columns
-sixty different bands. FFGL only — OFX hosts have no audio analysis.
+per-parameter audio link can pump one slider, but it can't give sixty columns
+sixty different bands. FFGL only, since OFX hosts have no audio analysis.
 
 The head colour is worth finding early. The bright leading character is most of
 what reads as digital rain rather than as a screensaver.
@@ -210,7 +212,7 @@ what reads as digital rain rather than as a screensaver.
 Verified offline. The Resolume build has been loaded into Resolume once, to
 reproduce [#3](https://github.com/stoatworks-labs/downpour/issues/3): v1.0.10 in
 Resolume Arena 7.27.1 on Windows, where Glyph Size above 0.75 cropped every glyph
-to its cell. The fix is checked by `--overhang` below and has not been run in
+to its cell. The fix is checked by `--overhang` below and hasn't been run in
 Resolume. The OpenFX build of v1.0.9 renders as a Fusion tool in DaVinci Resolve
 Studio 21.1 on macOS, and its generator's rain moves there; v1.0.8's failed every
 frame on that page. No other page of Resolve, and no other OpenFX host, has been tried.
@@ -238,7 +240,7 @@ cmake --install build     # into ~/Documents/Resolume Arena/Extra Effects
 ```
 
 `CLAUDE.md` is the command reference. `AGENTS.md` is the design rationale and the
-list of traps — read it before changing the rain maths, the atlas or the font
+list of traps; read it before changing the rain maths, the atlas or the font
 handling.
 
 <!-- attributions:start -->
@@ -250,15 +252,15 @@ This project is built on other people's work — see [ATTRIBUTIONS.md](ATTRIBUTI
 MIT — see [LICENSE](LICENSE).
 
 The glyphs in `source/GlyphData.cpp` are drawn for this project and are MIT along
-with everything else. Downpour deliberately ships **no** recreation of the film's
-typeface: the well-known fan font is free for personal use only. Mirrored
+with everything else. Downpour ships **no** recreation of the film's typeface, on
+purpose: the well-known fan font is free for personal use only. Mirrored
 half-width katakana is a technique rather than something anyone owns, so the
 built-in face draws its own, unmirrored at their real code points and flipped at
 sample time.
 
 The four built-in passages are public domain in the United States, taken from
-Project Gutenberg with the header, footer and trademark stripped — see
-[texts/SOURCES.md](texts/SOURCES.md).
+Project Gutenberg with the header, footer and trademark stripped (see
+[texts/SOURCES.md](texts/SOURCES.md)).
 
 Vendored: the [Resolume FFGL SDK](https://github.com/resolume/ffgl) and
 [stb_truetype](https://github.com/nothings/stb) (public domain).
